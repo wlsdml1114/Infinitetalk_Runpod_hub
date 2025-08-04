@@ -1,4 +1,5 @@
 import runpod
+from runpod.serverless.utils import rp_upload
 import os
 import base64
 import json

@@ -2,6 +2,8 @@
 
 이 프로젝트는 [MeiGen-AI/MultiTalk](https://github.com/MeiGen-AI/MultiTalk)를 RunPod의 Serverless 환경에 쉽게 배포하고 사용할 수 있도록 만든 템플릿입니다.
 
+[![Runpod](https://api.runpod.io/badge/wlsdml1114/Multitalk_Runpod_hub)](https://console.runpod.io/hub/wlsdml1114/Multitalk_Runpod_hub)
+
 MultiTalk는 단일 인물 사진과 다국어 음성 오디오를 입력받아, 실시간으로 자연스러운 립싱크 영상을 생성하는 AI 모델입니다.
 
 ## ✨ 주요 기능
