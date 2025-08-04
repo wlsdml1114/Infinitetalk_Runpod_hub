@@ -23,34 +23,20 @@ def handler(job):
     os.makedirs(task_id, exist_ok=True)
     
     try:
-        # --- 1. 입력 데이터 파싱 및 파일 저장 ---
-        
+        # --- 1. 입력 데이터 파싱 ---
         prompt = job_input.get("prompt")
-        cond_image_b64 = job_input.get("cond_image_b64")
-        cond_audio_b64_dict = job_input.get("cond_audio_b64", {})
-        # 'audio_type'을 입력에서 가져옵니다. (없을 경우 None)
+        image_path = job_input.get("image_path")
+        audio_paths = job_input.get("audio_paths", {})
         audio_type = job_input.get("audio_type")
 
-        if not all([prompt, cond_image_b64, cond_audio_b64_dict]):
-            return {"error": "필수 입력값(prompt, cond_image_b64, cond_audio_b64)이 누락되었습니다."}
+        if not all([prompt, image_path, audio_paths]):
+            return {"error": "필수 입력값(prompt, image_path, audio_paths)이 누락되었습니다."}
 
-        image_path = os.path.join(task_id, "cond_image.png")
-        with open(image_path, "wb") as f:
-            f.write(base64.b64decode(cond_image_b64))
-
-        saved_audio_paths = {}
-        for key, audio_b64 in cond_audio_b64_dict.items():
-            audio_path = os.path.join(task_id, f"{key}.mp3")
-            with open(audio_path, "wb") as f:
-                f.write(base64.b64decode(audio_b64))
-            saved_audio_paths[key] = audio_path
-        
-        # --- 2. generate_multitalk를 위한 input.json 생성 (수정된 부분) ---
-
+        # --- 2. generate_multitalk를 위한 input.json 생성 ---
         input_data_for_script = {
             "prompt": prompt,
             "cond_image": image_path,
-            "cond_audio": saved_audio_paths
+            "cond_audio": audio_paths
         }
         
         # audio_type 값이 있는 경우에만 딕셔너리에 추가합니다.

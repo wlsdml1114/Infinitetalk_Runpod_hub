@@ -1,0 +1,18 @@
+{
+    "title": "Multitalk_Runpod_hub",
+    "description": "MultiTalk is an AI model that generates natural lip-synced videos in real time using single-person photos and multilingual audio input.",
+    "type": "serverless",
+    "category": "video",
+    "iconUrl": "https://example.com/icon.png",
+  
+    "config": {
+      "runsOn": "GPU",
+      "containerDiskInGb": 180,
+  
+      "gpuCount": 1,
+      "gpuIds": "RTX 4090, RTX 5090",
+      "allowedCudaVersions": [
+        "12.9", "12.8"
+      ]
+    }
+}

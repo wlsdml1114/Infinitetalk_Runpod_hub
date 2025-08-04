@@ -1,0 +1,23 @@
+{
+    "tests": [
+      {
+        "name": "test_case_name",
+        "input": {
+            "prompt": "A person is talking.",
+            "image_path": "./examples/image.png",
+            "audio_paths": {
+                "person1": "./examples/audio.mp3"
+            }
+        },
+        "timeout": 10000
+      }
+    ],
+    "config": {
+      "gpuTypeId": "NVIDIA GeForce RTX 4090",
+      "gpuCount": 1,
+      "allowedCudaVersions": [
+        "12.8", "12.9"
+      ]
+    }
+  }
+  
