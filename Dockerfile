@@ -40,6 +40,12 @@ RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
 RUN git clone https://github.com/MeiGen-AI/MultiTalk.git
 WORKDIR /MultiTalk
     
+
+ENV TORCH_CUDA_ARCH_LIST="8.6;8.9"
+ENV MAX_JOBS=8
+ENV EXT_PARALLEL=4
+ENV NVCC_APPEND_FLAGS="--threads 8"
+
 RUN pip install torch==2.7.0 torchvision torchaudio xformers --index-url https://download.pytorch.org/whl/cu128
 RUN pip install misaki[en]
 RUN pip install ninja 
@@ -53,11 +59,6 @@ RUN pip install transformers==4.48.2
 
 WORKDIR /
 RUN git clone https://github.com/thu-ml/SageAttention.git
-
-ENV TORCH_CUDA_ARCH_LIST="8.6;8.9"
-ENV MAX_JOBS=32
-ENV EXT_PARALLEL=4
-ENV NVCC_APPEND_FLAGS="--threads 8"
 
 
 RUN HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./weights/Wan2.1-I2V-14B-480P
