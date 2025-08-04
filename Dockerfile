@@ -26,7 +26,7 @@ RUN apt-get update --yes && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
 
 # Install CUDA
-RUN wget https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/cuda_12.8.1_570.124.06_linux.run
+RUN wget -q https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/cuda_12.8.1_570.124.06_linux.run
 RUN sh cuda_12.8.1_570.124.06_linux.run --silent --toolkit --override
 RUN rm cuda_12.8.1_570.124.06_linux.run
 
@@ -60,11 +60,11 @@ ENV EXT_PARALLEL=4
 ENV NVCC_APPEND_FLAGS="--threads 8"
 
 
-RUN huggingface-cli download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./weights/Wan2.1-I2V-14B-480P
-RUN huggingface-cli download TencentGameMate/chinese-wav2vec2-base --local-dir ./weights/chinese-wav2vec2-base
-RUN huggingface-cli download TencentGameMate/chinese-wav2vec2-base model.safetensors --revision refs/pr/1 --local-dir ./weights/chinese-wav2vec2-base
-RUN huggingface-cli download hexgrad/Kokoro-82M --local-dir ./weights/Kokoro-82M
-RUN huggingface-cli download MeiGen-AI/MeiGen-MultiTalk --local-dir ./weights/MeiGen-MultiTalk
+RUN HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./weights/Wan2.1-I2V-14B-480P
+RUN HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download TencentGameMate/chinese-wav2vec2-base --local-dir ./weights/chinese-wav2vec2-base
+RUN HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download TencentGameMate/chinese-wav2vec2-base model.safetensors --revision refs/pr/1 --local-dir ./weights/chinese-wav2vec2-base
+RUN HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download hexgrad/Kokoro-82M --local-dir ./weights/Kokoro-82M
+RUN HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download MeiGen-AI/MeiGen-MultiTalk --local-dir ./weights/MeiGen-MultiTalk
     
 RUN mv weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json_old
 RUN ln -s /MultiTalk/weights/MeiGen-MultiTalk/diffusion_pytorch_model.safetensors.index.json weights/Wan2.1-I2V-14B-480P/
