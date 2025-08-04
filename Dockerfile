@@ -1,5 +1,5 @@
 # Use specific version of nvidia cuda image
-FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04 as runtime
+FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu22.04 as runtime
 
 # Remove any third-party apt sources to avoid issues with expiring keys.
 RUN rm -f /etc/apt/sources.list.d/*.list
@@ -9,6 +9,9 @@ SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV SHELL=/bin/bash
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH="/usr/local/cuda/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH}"
 
 # Set working directory
 WORKDIR /
@@ -24,11 +27,6 @@ RUN apt-get update --yes && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
-
-# Install CUDA
-RUN wget -q https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/cuda_12.8.1_570.124.06_linux.run
-RUN sh cuda_12.8.1_570.124.06_linux.run --silent --toolkit --override
-RUN rm cuda_12.8.1_570.124.06_linux.run
 
 # Download and install pip
 RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
