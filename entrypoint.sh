@@ -17,7 +17,7 @@ if [ ! -f "$INSTALL_FLAG" ]; then
     # 2. SageAttention 설치
     echo ">>> Installing SageAttention..."
     cd /SageAttention
-    pip install -e .
+    pip install --no-build-isolation -e .
     cd /MultiTalk # 원래 디렉토리로 복귀
 
     # 3. 모델 가중치 및 파일 다운로드
