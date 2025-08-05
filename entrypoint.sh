@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e # 스크립트 실행 중 에러가 발생하면 즉시 중단
 
+export HF_HUB_ENABLE_HF_TRANSFER=1
+
 # 모든 설치가 완료되었는지 확인하는 플래그 파일 경로
 INSTALL_FLAG="/opt/all_installed.flag"
 

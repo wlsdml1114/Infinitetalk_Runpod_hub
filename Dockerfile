@@ -3,6 +3,8 @@ FROM wlsdml1114/multitalk-base:1.0
 
 WORKDIR /
 
+RUN pip install -U "huggingface_hub[hf_transfer]"
+
 # Copy all necessary files from your project folder into the container.
 # This includes the modified entrypoint.sh, handler.py, and any other required files.
 COPY . .
