@@ -2,6 +2,7 @@
 set -e # 스크립트 실행 중 에러가 발생하면 즉시 중단
 
 export HF_HUB_ENABLE_HF_TRANSFER=1
+export HF_HUB_DISABLE_PROGRESS_BARS=1
 
 # 모든 설치가 완료되었는지 확인하는 플래그 파일 경로
 INSTALL_FLAG="/opt/all_installed.flag"
@@ -11,6 +12,7 @@ if [ ! -f "$INSTALL_FLAG" ]; then
     echo ">>> First time running. Performing initial setup..."
 
     # 1. SageAttention 리포지토리 클론
+    cd /
     echo ">>> Cloning SageAttention repository..."
     git clone https://github.com/thu-ml/SageAttention.git
 
@@ -24,11 +26,11 @@ if [ ! -f "$INSTALL_FLAG" ]; then
     echo ">>> Downloading models... This may take a while."
     mkdir -p ./weights # weights 디렉토리 생성
 
-    HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./weights/Wan2.1-I2V-14B-480P
-    HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download TencentGameMate/chinese-wav2vec2-base --local-dir ./weights/chinese-wav2vec2-base
-    HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download TencentGameMate/chinese-wav2vec2-base model.safetensors --revision refs/pr/1 --local-dir ./weights/chinese-wav2vec2-base
-    HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download hexgrad/Kokoro-82M --local-dir ./weights/Kokoro-82M
-    HF_HUB_DISABLE_PROGRESS_BARS=1 huggingface-cli download MeiGen-AI/MeiGen-MultiTalk --local-dir ./weights/MeiGen-MultiTalk
+    huggingface-cli download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./weights/Wan2.1-I2V-14B-480P
+    huggingface-cli download TencentGameMate/chinese-wav2vec2-base --local-dir ./weights/chinese-wav2vec2-base
+    huggingface-cli download TencentGameMate/chinese-wav2vec2-base model.safetensors --revision refs/pr/1 --local-dir ./weights/chinese-wav2vec2-base
+    huggingface-cli download hexgrad/Kokoro-82M --local-dir ./weights/Kokoro-82M
+    huggingface-cli download MeiGen-AI/MeiGen-MultiTalk --local-dir ./weights/MeiGen-MultiTalk
     
     wget https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors -O ./weights/Wan2.1_I2V_14B_FusionX_LoRA.safetensors
     wget https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors -O ./weights/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors

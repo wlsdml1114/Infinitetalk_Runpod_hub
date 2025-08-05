@@ -1,5 +1,5 @@
 # Use the base image that has necessary CUDA and Python environments
-FROM wlsdml1114/multitalk-base:1.0
+FROM wlsdml1114/multitalk-base:1.0 as runtime
 
 WORKDIR /
 
