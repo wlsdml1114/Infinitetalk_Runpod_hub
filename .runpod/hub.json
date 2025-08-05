@@ -7,10 +7,10 @@
   
     "config": {
       "runsOn": "GPU",
-      "containerDiskInGb": 180,
+      "containerDiskInGb": 10,
   
       "gpuCount": 1,
-      "gpuIds": "RTX 4090, RTX 5090",
+      "gpuIds": "ADA_24",
       "allowedCudaVersions": [
         "12.9", "12.8"
       ]

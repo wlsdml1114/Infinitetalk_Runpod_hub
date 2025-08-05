@@ -12,7 +12,13 @@ if [ ! -f "$INSTALL_FLAG" ]; then
     echo ">>> Cloning SageAttention repository..."
     git clone https://github.com/thu-ml/SageAttention.git
 
-    # 2. 모델 가중치 및 파일 다운로드
+    # 2. SageAttention 설치
+    echo ">>> Installing SageAttention..."
+    cd /SageAttention
+    pip install -e .
+    cd /MultiTalk # 원래 디렉토리로 복귀
+
+    # 3. 모델 가중치 및 파일 다운로드
     echo ">>> Downloading models... This may take a while."
     mkdir -p ./weights # weights 디렉토리 생성
 
@@ -25,17 +31,12 @@ if [ ! -f "$INSTALL_FLAG" ]; then
     wget https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors -O ./weights/Wan2.1_I2V_14B_FusionX_LoRA.safetensors
     wget https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors -O ./weights/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors
 
-    # 3. 파일 이름 변경 및 심볼릭 링크 생성
+    # 4. 파일 이름 변경 및 심볼릭 링크 생성
     echo ">>> Setting up symbolic links for models..."
     mv weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json_old
     ln -s /MultiTalk/weights/MeiGen-MultiTalk/diffusion_pytorch_model.safetensors.index.json weights/Wan2.1-I2V-14B-480P/
     ln -s /MultiTalk/weights/MeiGen-MultiTalk/multitalk.safetensors weights/Wan2.1-I2V-14B-480P/
 
-    # 4. SageAttention 설치
-    echo ">>> Installing SageAttention..."
-    cd /SageAttention
-    python setup.py install
-    cd / # 원래 디렉토리로 복귀
 
     # 5. 필요한 Python 패키지 설치
     echo ">>> Installing Python packages..."
