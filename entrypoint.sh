@@ -11,18 +11,10 @@ INSTALL_FLAG="/opt/all_installed.flag"
 if [ ! -f "$INSTALL_FLAG" ]; then
     echo ">>> First time running. Performing initial setup..."
 
-    # 1. SageAttention 리포지토리 클론
-    cd /
-    echo ">>> Cloning SageAttention repository..."
-    git clone https://github.com/thu-ml/SageAttention.git
+    # SageAttention은 base 이미지에서 이미 설치됨
+    echo ">>> SageAttention already installed in base image"
 
-    # 2. SageAttention 설치
-    echo ">>> Installing SageAttention..."
-    cd /SageAttention
-    pip install --no-build-isolation -e .
-    cd /MultiTalk # 원래 디렉토리로 복귀
-
-    # 3. 모델 가중치 및 파일 다운로드
+    # 1. 모델 가중치 및 파일 다운로드
     echo ">>> Downloading models... This may take a while."
     mkdir -p ./weights # weights 디렉토리 생성
 
@@ -35,18 +27,14 @@ if [ ! -f "$INSTALL_FLAG" ]; then
     wget https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors -O ./weights/Wan2.1_I2V_14B_FusionX_LoRA.safetensors
     wget https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors -O ./weights/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors
 
-    # 4. 파일 이름 변경 및 심볼릭 링크 생성
+    # 2. 파일 이름 변경 및 심볼릭 링크 생성
     echo ">>> Setting up symbolic links for models..."
     mv weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json_old
     ln -s /MultiTalk/weights/MeiGen-MultiTalk/diffusion_pytorch_model.safetensors.index.json weights/Wan2.1-I2V-14B-480P/
     ln -s /MultiTalk/weights/MeiGen-MultiTalk/multitalk.safetensors weights/Wan2.1-I2V-14B-480P/
 
 
-    # 5. 필요한 Python 패키지 설치
-    echo ">>> Installing Python packages..."
-    pip install runpod websocket-client
-
-    # 6. 모든 과정이 완료되었음을 알리는 플래그 파일 생성
+    # 4. 모든 과정이 완료되었음을 알리는 플래그 파일 생성
     echo ">>> Initial setup complete."
     touch "$INSTALL_FLAG"
 else

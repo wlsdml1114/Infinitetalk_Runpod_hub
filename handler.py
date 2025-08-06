@@ -55,14 +55,15 @@ def handler(job):
 
         # 실행할 CLI 명령어를 리스트 형태로 구성합니다.
         # 모든 인자 값은 문자열(string) 형태여야 합니다.
+        # 작업 디렉토리를 /MultiTalk로 설정하고 절대 경로 사용
         command = [
-            'python', 'generate_multitalk.py',
-            '--ckpt_dir', 'weights/Wan2.1-I2V-14B-480P',
-            '--wav2vec_dir', 'weights/chinese-wav2vec2-base',
+            'python', '/MultiTalk/generate_multitalk.py',
+            '--ckpt_dir', '/MultiTalk/weights/Wan2.1-I2V-14B-480P',
+            '--wav2vec_dir', '/MultiTalk/weights/chinese-wav2vec2-base',
             '--input_json', input_json_path,
             '--quant', 'int8',
-            '--quant_dir', 'weights/MeiGen-MultiTalk',
-            '--lora_dir', 'weights/MeiGen-MultiTalk/quant_models/quant_model_int8_FusionX.safetensors',
+            '--quant_dir', '/MultiTalk/weights/MeiGen-MultiTalk',
+            '--lora_dir', '/MultiTalk/weights/MeiGen-MultiTalk/quant_models/quant_model_int8_FusionX.safetensors',
             '--sample_text_guide_scale', str(job_input.get("sample_text_guide_scale", 1.0)),
             '--use_teacache', # 플래그 인자는 값 없이 이름만 추가
             '--sample_audio_guide_scale', str(job_input.get("sample_audio_guide_scale", 2.0)),
@@ -80,11 +81,13 @@ def handler(job):
         # check=True: 명령 실행 실패 시 CalledProcessError 발생
         # capture_output=True: stdout, stderr 캡처
         # text=True: stdout, stderr를 텍스트로 디코딩
+        # cwd='/MultiTalk': 작업 디렉토리를 /MultiTalk로 설정
         result = subprocess.run(
             command, 
             capture_output=True, 
             text=True, 
-            check=True
+            check=True,
+            cwd='/MultiTalk'
         )
         
         # 디버깅을 위해 자식 프로세스의 출력을 로깅
