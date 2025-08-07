@@ -112,12 +112,36 @@ def handler(job):
 
     except subprocess.CalledProcessError as e:
         # 스크립트 실행이 0이 아닌 종료 코드를 반환한 경우 (에러 발생)
-        print(f"스크립트 실행 중 에러 발생: {e}")
+                # 스크립트 실행이 0이 아닌 종료 코드를 반환한 경우 (에러 발생)
+        # -----------------------------------------------------
+        # ✨ 수정된 부분: 상세 에러 로그를 직접 출력합니다.
+        # -----------------------------------------------------
+        logger.error("스크립트 실행 중 CalledProcessError 발생!")
+        logger.error(f"Return Code: {e.returncode}")
+        
+        logger.error("--- Subprocess STDOUT ---")
+        logger.error(e.stdout) # 캡처된 표준 출력을 로그로 남깁니다.
+        
+        logger.error("--- Subprocess STDERR ---")
+        logger.error(e.stderr) # 캡처된 표준 에러를 로그로 남깁니다.
+        
+        print("스크립트 실행 중 CalledProcessError 발생!")
+        print(f"Return Code: {e.returncode}")
+        
+        print("--- Subprocess STDOUT ---")
+        print(e.stdout) # 캡처된 표준 출력을 로그로 남깁니다.
+        
+        print("--- Subprocess STDERR ---")
+        print(e.stderr) # 캡처된 표준 에러를 로그로 남깁니다.
+        # -----------------------------------------------------
+
+        # API 호출자에게 반환될 응답 (기존과 동일)
         return {
             "error": "generate_multitalk.py 스크립트 실행 실패",
             "stdout": e.stdout,
             "stderr": e.stderr
         }
+
     except Exception as e:
         print(f"핸들러에서 에러 발생: {e}")
         return {"error": str(e)}

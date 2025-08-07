@@ -43,4 +43,5 @@ fi
 
 # CMD로 전달된 원래 명령어를 실행 (예: python handler.py)
 echo ">>> Starting application..."
-exec "$@"
+cd /
+python handler.py

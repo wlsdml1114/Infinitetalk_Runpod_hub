@@ -12,8 +12,3 @@ RUN chmod +x ./entrypoint.sh
 # Set the entrypoint script to run when the container starts.
 # All setup tasks are now handled within this script.
 ENTRYPOINT ["./entrypoint.sh"]
-
-WORKDIR /
-# The default command to run after the entrypoint script finishes its setup.
-# This will be passed to the `exec "$@"` line in entrypoint.sh.
-CMD ["python", "handler.py"]
