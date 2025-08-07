@@ -30,7 +30,6 @@ if [ ! -f "$INSTALL_FLAG" ]; then
 
     # 2. 파일 이름 변경 및 심볼릭 링크 생성
     echo ">>> Setting up symbolic links for models..."
-    mv /MultiTalk/weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json /MultiTalk/weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json_old
     ln -s /MultiTalk/weights/MeiGen-MultiTalk/diffusion_pytorch_model.safetensors.index.json /MultiTalk/weights/Wan2.1-I2V-14B-480P/
     ln -s /MultiTalk/weights/MeiGen-MultiTalk/multitalk.safetensors /MultiTalk/weights/Wan2.1-I2V-14B-480P/
 
