@@ -16,7 +16,7 @@ if [ ! -f "$INSTALL_FLAG" ]; then
 
     # 1. 모델 가중치 및 파일 다운로드
     echo ">>> Downloading models... This may take a while."
-    mkdir -p ./weights # weights 디렉토리 생성
+    cd /MultiTalk
 
     huggingface-cli download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./weights/Wan2.1-I2V-14B-480P
     huggingface-cli download TencentGameMate/chinese-wav2vec2-base --local-dir ./weights/chinese-wav2vec2-base
@@ -24,14 +24,15 @@ if [ ! -f "$INSTALL_FLAG" ]; then
     huggingface-cli download hexgrad/Kokoro-82M --local-dir ./weights/Kokoro-82M
     huggingface-cli download MeiGen-AI/MeiGen-MultiTalk --local-dir ./weights/MeiGen-MultiTalk
     
+    mv ./weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json ./weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json_old
     wget https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors -O ./weights/Wan2.1_I2V_14B_FusionX_LoRA.safetensors
     wget https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors -O ./weights/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors
 
     # 2. 파일 이름 변경 및 심볼릭 링크 생성
     echo ">>> Setting up symbolic links for models..."
-    mv weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json_old
-    ln -s /MultiTalk/weights/MeiGen-MultiTalk/diffusion_pytorch_model.safetensors.index.json weights/Wan2.1-I2V-14B-480P/
-    ln -s /MultiTalk/weights/MeiGen-MultiTalk/multitalk.safetensors weights/Wan2.1-I2V-14B-480P/
+    mv /MultiTalk/weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json /MultiTalk/weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json_old
+    ln -s /MultiTalk/weights/MeiGen-MultiTalk/diffusion_pytorch_model.safetensors.index.json /MultiTalk/weights/Wan2.1-I2V-14B-480P/
+    ln -s /MultiTalk/weights/MeiGen-MultiTalk/multitalk.safetensors /MultiTalk/weights/Wan2.1-I2V-14B-480P/
 
 
     # 4. 모든 과정이 완료되었음을 알리는 플래그 파일 생성
