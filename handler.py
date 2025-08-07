@@ -44,14 +44,15 @@ def handler(job):
         if audio_type:
             input_data_for_script["audio_type"] = audio_type
         
-        input_json_path = os.path.join(task_id, "input.json")
+        input_json_path = os.path.abspath(os.path.join(task_id, "input.json")) # ✨ 핵심 수정 부분
         with open(input_json_path, 'w', encoding='utf-8') as f:
             json.dump(input_data_for_script, f, ensure_ascii=False, indent=4)
 
         # --- 3. CLI 명령어 리스트 생성 ---
         
         output_filename = "generated_video.mp4"
-        output_video_path = os.path.join(task_id, output_filename)
+        output_video_path = os.path.abspath(os.path.join(task_id, output_filename))
+        
 
         # 실행할 CLI 명령어를 리스트 형태로 구성합니다.
         # 모든 인자 값은 문자열(string) 형태여야 합니다.
@@ -124,7 +125,7 @@ def handler(job):
         
         logger.error("--- Subprocess STDERR ---")
         logger.error(e.stderr) # 캡처된 표준 에러를 로그로 남깁니다.
-        
+
         print("스크립트 실행 중 CalledProcessError 발생!")
         print(f"Return Code: {e.returncode}")
         
