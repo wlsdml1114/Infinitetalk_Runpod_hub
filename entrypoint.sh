@@ -18,11 +18,11 @@ if [ ! -f "$INSTALL_FLAG" ]; then
     echo ">>> Downloading models... This may take a while."
     cd /MultiTalk
 
-    huggingface-cli download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./weights/Wan2.1-I2V-14B-480P
-    huggingface-cli download TencentGameMate/chinese-wav2vec2-base --local-dir ./weights/chinese-wav2vec2-base
-    huggingface-cli download TencentGameMate/chinese-wav2vec2-base model.safetensors --revision refs/pr/1 --local-dir ./weights/chinese-wav2vec2-base
-    huggingface-cli download hexgrad/Kokoro-82M --local-dir ./weights/Kokoro-82M
-    huggingface-cli download MeiGen-AI/MeiGen-MultiTalk --local-dir ./weights/MeiGen-MultiTalk
+    hf download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./weights/Wan2.1-I2V-14B-480P
+    hf download TencentGameMate/chinese-wav2vec2-base --local-dir ./weights/chinese-wav2vec2-base
+    hf download TencentGameMate/chinese-wav2vec2-base model.safetensors --revision refs/pr/1 --local-dir ./weights/chinese-wav2vec2-base
+    hf download hexgrad/Kokoro-82M --local-dir ./weights/Kokoro-82M
+    hf download MeiGen-AI/MeiGen-MultiTalk --local-dir ./weights/MeiGen-MultiTalk
     
     mv ./weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json ./weights/Wan2.1-I2V-14B-480P/diffusion_pytorch_model.safetensors.index.json_old
     wget https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors -O ./weights/Wan2.1_I2V_14B_FusionX_LoRA.safetensors
