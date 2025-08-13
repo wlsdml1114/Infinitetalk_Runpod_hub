@@ -261,7 +261,7 @@ if job_output and status == 'COMPLETED':
         print("🎨 Decoding and saving result to file...")
         try:
             decoded_video = base64.b64decode(video_b64)
-            output_filename = f"C:/Users/wlsdm/Downloads/result_{job_id}.mp4"
+            output_filename = f"./result_{job_id}.mp4" # change path
             
             with open(output_filename, 'wb') as f:
                 f.write(decoded_video)

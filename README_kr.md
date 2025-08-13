@@ -257,7 +257,7 @@ if job_output and status == 'COMPLETED':
         print("🎨 결과물을 디코딩하고 파일로 저장합니다...")
         try:
             decoded_video = base64.b64decode(video_b64)
-            output_filename = f"C:/Users/wlsdm/Downloads/result_{job_id}.mp4"
+            output_filename = f"./result_{job_id}.mp4" # 경로 변경경
             
             with open(output_filename, 'wb') as f:
                 f.write(decoded_video)
@@ -269,7 +269,7 @@ if job_output and status == 'COMPLETED':
         print("⚠️ 결과물(video_b64)이 반환되지 않았습니다. 핸들러의 반환값을 확인하세요.")
 elif status == 'FAILED':
         print(f"실패 원인: {job_output}")
-        
+
 ```
 
 
