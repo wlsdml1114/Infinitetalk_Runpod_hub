@@ -1,47 +1,40 @@
-# MultiTalk for RunPod Serverless
 
-이 프로젝트는 [MeiGen-AI/MultiTalk](https://github.com/MeiGen-AI/MultiTalk)를 RunPod의 Serverless 환경에 쉽게 배포하고 사용할 수 있도록 만든 템플릿입니다.
+
+# MultiTalk for RunPod Serverless
+[한국어 README 보기](README_kr.md)
+
+This project is a template designed to easily deploy and use [MeiGen-AI/MultiTalk](https://github.com/MeiGen-AI/MultiTalk) in the RunPod Serverless environment.
 
 [![Runpod](https://api.runpod.io/badge/wlsdml1114/Multitalk_Runpod_hub)](https://console.runpod.io/hub/wlsdml1114/Multitalk_Runpod_hub)
 
-MultiTalk는 단일 인물 사진과 다국어 음성 오디오를 입력받아, 실시간으로 자연스러운 립싱크 영상을 생성하는 AI 모델입니다.
+MultiTalk is an AI model that takes a single portrait image and multilingual speech audio as input to generate natural lip-sync videos in real-time.
 
-## ✨ 주요 기능
+## ✨ Key Features
 
-*   **다국어 지원**: 다양한 언어의 음성을 처리하여 영상에 반영합니다.
-*   **실시간 영상 생성**: 빠른 속도로 입력된 오디오와 동기화된 영상을 만듭니다.
-*   **고품질 립싱크**: 입력된 오디오에 맞춰 입술 움직임이 정교하게 동기화됩니다.
+*   **Multilingual Support**: Processes speech in various languages and reflects it in the video.
+*   **Real-time Video Generation**: Creates videos synchronized with input audio at high speed.
+*   **High-Quality Lip-sync**: Lip movements are precisely synchronized with the input audio.
 
-## 🚀 RunPod Serverless 템플릿
+## 🚀 RunPod Serverless Template
 
-이 템플릿은 RunPod의 Serverless Worker로 MultiTalk를 실행하기 위해 필요한 모든 구성 요소를 포함하고 있습니다.
+This template includes all the necessary components to run MultiTalk as a RunPod Serverless Worker.
 
-*   **Dockerfile**: 모델 실행에 필요한 모든 의존성을 설치하고 환경을 구성합니다.
-*   **handler.py**: RunPod Serverless의 요청을 받아 처리하는 핸들러 함수가 구현되어 있습니다.
-*   **builder/fetch_models.py**: 빌드 시점에 필요한 AI 모델 파일을 다운로드합니다.
-*   **entrypoint.sh**: 워커 시작 시 필요한 초기화 작업을 수행합니다.
+*   **Dockerfile**: Configures the environment and installs all dependencies required for model execution.
+*   **handler.py**: Implements the handler function that processes requests for RunPod Serverless.
+*   **entrypoint.sh**: Performs initialization tasks when the worker starts.
 
-## 🛠️ 사용 방법 및 API Reference
+### Input
 
-1.  이 리포지토리를 기반으로 RunPod에 Serverless Endpoint를 생성합니다.
-2.  빌드가 완료되고 엔드포인트가 활성화되면, 아래 API Reference에 따라 HTTP POST 요청을 통해 작업을 제출합니다.
+The `input` object must contain the following fields. `image_path` and `audio_paths` support **URL, file path, or Base64 encoded string**.
 
-### 입력 (Input)
-
-`input` 객체는 다음 필드를 포함해야 합니다. RunPod은 URL로 제공된 파일을 다운로드하여 처리하므로 `image_path`와 `audio_paths`에 파일 경로 대신 URL을 사용할 수 있습니다.
-
-| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+| Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `prompt` | `string` | **Yes** | `N/A` | 생성될 비디오에 대한 설명 텍스트입니다. |
-| `image_path` | `string` | **Yes** | `N/A` | 립싱크를 적용할 인물 사진 이미지의 경로 또는 URL입니다. |
-| `audio_paths` | `object` | **Yes** | `N/A` | `{ "화자ID": "오디오 경로/URL" }` 형식의 오디오 파일 맵입니다. |
-| `audio_type` | `string` | No | `N/A` | 오디오 처리 방식을 지정합니다. (예: `speech`, `singing`) |
-| `sample_text_guide_scale` | `number` | No | `1.0` | 텍스트 프롬프트의 영향력을 조절합니다. |
-| `sample_audio_guide_scale` | `number` | No | `2.0` | 오디오의 영향력을 조절합니다. |
-| `sample_steps` | `integer` | No | `8` | 비디오 생성 시 샘플링 스텝 수입니다. |
-| `mode` | `string` | No | `streaming` | 생성 모드를 지정합니다. |
+| `prompt` | `string` | **Yes** | `N/A` | Description text for the video to be generated. |
+| `image_path` | `string` | **Yes** | `N/A` | Path, URL, or Base64 string of the portrait image to apply lip-sync to. |
+| `audio_paths` | `object` | **Yes** | `N/A` | Map of audio files in the format `{ "person1": "audio_path/URL/Base64" }`, or `{ "person1": "audio_path/URL/Base64", "person2": "audio_path/URL/Base64" }` |
 
-**요청 예시:**
+
+**Request Example:**
 
 ```json
 {
@@ -49,70 +42,247 @@ MultiTalk는 단일 인물 사진과 다국어 음성 오디오를 입력받아,
     "prompt": "A person is talking in a natural way.",
     "image_path": "https://path/to/your/portrait.jpg",
     "audio_paths": {
-      "person1": "https://path/to/your/speech.wav",
-      "person2": "https://path/to/your/speech.wav" # 선택적
+      "person1": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="
     }
   }
 }
 ```
 
-### 출력 (Output)
+### Output
 
-#### 성공 (Success)
+#### Success
 
-작업이 성공하면, 생성된 비디오가 Base64로 인코딩된 JSON 객체를 반환합니다.
+If the job is successful, it returns a JSON object with the generated video Base64 encoded.
 
-| 파라미터 | 타입 | 설명 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `status` | `string` | `"success"`를 반환합니다. |
-| `video_base64` | `string` | Base64로 인코딩된 비디오 파일 데이터입니다. |
-| `filename` | `string` | 생성된 비디오 파일의 이름입니다. |
+| `status` | `string` | Returns `"success"`. |
+| `video_base64` | `string` | Base64 encoded video file data. |
+| `filename` | `string` | Name of the generated video file (excluding `.mp4` extension). |
 
-**성공 응답 예시:**
+**Success Response Example:**
 
 ```json
 {
   "status": "success",
   "video_base64": "...",
-  "filename": "generated_video.mp4"
+  "filename": "generated_video"
 }
 ```
 
-#### 오류 (Error)
+#### Error
 
-작업이 실패하면, 오류 메시지를 포함한 JSON 객체를 반환합니다.
+If the job fails, it returns a JSON object containing an error message.
 
-| 파라미터 | 타입 | 설명 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `error` | `string` | 발생한 오류에 대한 설명입니다. |
-| `details` | `string` | (선택) 오류에 대한 추가 정보입니다. |
+| `error` | `string` | Description of the error that occurred. |
+| `stdout` | `string` | (Optional) Standard output logs generated during script execution. |
+| `stderr` | `string` | (Optional) Standard error logs generated during script execution. |
 
-**오류 응답 예시:**
+**Error Response Example:**
 
 ```json
 {
-  "error": "필수 입력값(prompt, image_path, audio_paths)이 누락되었습니다."
+  "error": "Failed to execute generate_multitalk.py script",
+  "stdout": "...",
+  "stderr": "..."
 }
 ```
 
-## 📂 프로젝트 구조
+## 🛠️ Usage and API Reference
 
+1.  Create a Serverless Endpoint on RunPod based on this repository.
+2.  Once the build is complete and the endpoint is active, submit jobs via HTTP POST requests according to the API Reference below.
+
+### 📁 Using Network Volumes
+
+Instead of directly transmitting Base64 encoded files, you can use RunPod's Network Volumes to handle large files. This is especially useful when dealing with large image or audio files.
+
+1.  **Create and Connect Network Volume**: Create a Network Volume (e.g., S3-based volume) from the RunPod dashboard and connect it to your Serverless Endpoint settings.
+2.  **Upload Files**: Upload the image and audio files you want to use to the created Network Volume.
+3.  **Specify Paths**: When making an API request, specify the file paths within the Network Volume for `image_path` and `audio_paths`. For example, if the volume is mounted at `/my_volume` and you use `portrait.jpg`, the path would be `"/my_volume/portrait.jpg"`.
+
+### Usage Example (Python)
+
+This example is based on the code in `single_examples.ipynb`.
+
+#### 1. Configuration
+
+```python
+import os
+import requests
+import json
+import boto3
+from botocore.client import Config
+import time
+import base64
+
+# RunPod Serverless API Information
+ENDPOINT_ID = ""    # Replace with your actual serverless endpoint ID
+RUN_URL = f"https://api.runpod.ai/v2/{ENDPOINT_ID}/run"
+RUNPOD_API_ENDPOINT = f"https://api.runpod.ai/v2/{ENDPOINT_ID}/run"
+RUNPOD_API_KEY = '' # Replace with your actual key
+
+# RunPod Network Volume S3 Information (Check RunPod Dashboard) Adjust to your actual settings
+S3_ENDPOINT_URL = 'https://s3api-eu-ro-1.runpod.io/'  # e.g., https://us-east-1.runpod.cloud
+S3_ACCESS_KEY_ID = ''
+S3_SECRET_ACCESS_KEY = ''
+S3_BUCKET_NAME = '' 
+S3_REGION = ''
+
+# Local file paths to upload
+IMAGE_PATH = ""
+AUDIO_PATH = ""
+
+# File names to be uploaded to S3 (can include path)
+S3_IMAGE_KEY = f"input/multitalk/{os.path.basename(IMAGE_PATH)}"
+S3_AUDIO_KEY = f"input/multitalk/{os.path.basename(AUDIO_PATH)}"
 ```
-.
-├── Dockerfile              # 컨테이너 빌드를 위한 Dockerfile
-├── entrypoint.sh           # 워커 실행 스크립트
-├── handler.py              # Serverless 요청/응답 핸들러
-├── builder/
-│   └── fetch_models.py     # 모델 다운로드 스크립트
-└── ...
+
+#### 2. Upload Files to S3
+
+```python
+def upload_to_s3(file_path, bucket, object_name):
+    """Uploads the specified file to S3-compatible storage."""
+    print(f"Creating S3 client... (Endpoint: {S3_ENDPOINT_URL})")
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=S3_ENDPOINT_URL,
+        aws_access_key_id=S3_ACCESS_KEY_ID,
+        aws_secret_access_key=S3_SECRET_ACCESS_KEY,
+        region_name=S3_REGION,
+        config=Config(signature_version='s3v4')
+    )
+    
+    try:
+        print(f"Starting upload of '{file_path}' to S3 bucket '{bucket}' as '{object_name}'...")
+        s3_client.upload_file(file_path, bucket, object_name)
+        print(f"✅ File upload successful: s3://{bucket}/{object_name}")
+        return f"/runpod-volume/{object_name}"
+    except Exception as e:
+        print(f"❌ File upload failed: {e}")
+        return None
+
+# Check if files exist
+if not all(map(os.path.exists, [IMAGE_PATH, AUDIO_PATH])):
+    raise FileNotFoundError("Check input file paths. Files do not exist.")
+
+# Upload each file to S3
+image_s3_path = upload_to_s3(IMAGE_PATH, S3_BUCKET_NAME, S3_IMAGE_KEY)
+audio_s3_path = upload_to_s3(AUDIO_PATH, S3_BUCKET_NAME, S3_AUDIO_KEY)
+
+if not all([image_s3_path, audio_s3_path]):
+    raise RuntimeError("S3 file upload failed, stopping operation.")
 ```
 
-## 🙏 원본 프로젝트
+#### 3. Submit Job Request
 
-이 프로젝트는 다음의 원본 저장소를 기반으로 합니다. 모델과 핵심 로직에 대한 모든 권한은 원본 저작자에게 있습니다.
+```python
+# HTTP Request Headers
+headers = {
+    "Authorization": f"Bearer {RUNPOD_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+# Data to send to the API (using S3 paths instead of Base64)
+# Important: The server's handler code must be modified to expect keys like 'cond_image_s3_path'.
+payload = {
+    "input": {
+        "prompt": "a man talking",
+        "image_path": image_s3_path,
+        "audio_paths": {
+            "person1": audio_s3_path
+        }
+    }
+}
+
+# Send POST request to the API
+print(f"\n🚀 Submitting job to RunPod Serverless endpoint [{RUNPOD_API_ENDPOINT}]...")
+try:
+    response = requests.post(RUNPOD_API_ENDPOINT, headers=headers, json=payload)
+    response.raise_for_status()  # Raise an error for bad status codes (4xx or 5xx)
+
+    # Check response
+    print("✅ Request successful!")
+    print(f"📄 Status Code: {response.status_code}")
+    
+    response_data = response.json()
+    print("\n[RunPod API Response Content]")
+    print(json.dumps(response_data, indent=4))
+    
+    job_id = response_data.get('id')
+    print(f"\n✨ Job successfully submitted. Job ID: {job_id}")
+    print("You can check the result via the /status endpoint.")
+
+except requests.exceptions.HTTPError as errh:
+    print(f"❌ HTTP Error occurred: {errh}")
+    print(f"Response content: {errh.response.text}")
+except requests.exceptions.RequestException as err:
+    print(f"❌ Error during request: {err}")
+```
+
+#### 4. Check Result
+
+```python
+job_output = None
+
+STATUS_URL = f"https://api.runpod.ai/v2/{ENDPOINT_ID}/status"
+while True:
+    print(f"⏱️ Checking job status... (Job ID: {job_id})")
+    status_response = requests.get(f"{STATUS_URL}/{job_id}", headers=headers)
+    status_response.raise_for_status()
+    
+    status_data = status_response.json()
+    status = status_data.get('status')
+    
+    if status == 'COMPLETED':
+        print("✅ Job completed!")
+        job_output = status_data.get('output')
+        break
+    elif status == 'FAILED':
+        print("❌ Job failed.")
+        job_output = status_data.get('error', 'Unknown error')
+        break
+    elif status in ['IN_QUEUE', 'IN_PROGRESS']:
+        print(f"🏃 Job in progress... (Status: {status})")
+        time.sleep(5)  # Wait 5 seconds and check again
+    else:
+        print(f"❓ Unknown status: {status}")
+        job_output = status_data
+        break
+
+# --- Part 3: Download and Decode Result ---
+if job_output and status == 'COMPLETED':
+    # You may need to adjust the 'video_b64' key depending on the handler's return value.
+    video_b64 = job_output.get('video_base64')
+    
+    if video_b64:
+        print("🎨 Decoding and saving result to file...")
+        try:
+            decoded_video = base64.b64decode(video_b64)
+            output_filename = f"C:/Users/wlsdm/Downloads/result_{job_id}.mp4"
+            
+            with open(output_filename, 'wb') as f:
+                f.write(decoded_video)
+                
+            print(f"✨ Final result saved to '{output_filename}'!")
+        except Exception as e:
+            print(f"❌ Error decoding or saving result: {e}")
+    else:
+        print("⚠️ Result (video_b64) not returned. Check handler's return value.")
+elif status == 'FAILED':
+        print(f"Failure reason: {job_output}")
+```
+
+
+
+## 🙏 Original Project
+
+This project is based on the following original repository. All rights to the model and core logic belong to the original authors.
 
 *   **MeiGen-AI/MultiTalk:** [https://github.com/MeiGen-AI/MultiTalk](https://github.com/MeiGen-AI/MultiTalk)
 
-## 📄 라이선스
+## 📄 License
 
-원본 MultiTalk 프로젝트는 Apache 2.0 라이선스를 따릅니다. 이 템플릿 또한 해당 라이선스를 준수합니다.
+The original MultiTalk project follows the Apache 2.0 License. This template also adheres to that license.
