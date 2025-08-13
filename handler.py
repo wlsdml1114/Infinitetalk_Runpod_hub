@@ -11,28 +11,46 @@ import logging
 
 def save_data_if_base64(data_input, temp_dir, output_filename):
     """
-    입력 데이터가 Base64 문자열인지 확인하고, 맞다면 파일로 저장 후 경로를 반환합니다.
-    만약 일반 경로 문자열이라면 그대로 반환합니다.
+    입력 데이터가 URL, Base64 문자열, 또는 파일 경로인지 확인하고,
+    URL이면 다운로드, Base64이면 디코딩하여 파일로 저장 후 절대 경로를 반환합니다.
     """
     # 입력값이 문자열이 아니면 그대로 반환
     if not isinstance(data_input, str):
         return data_input
 
+    # URL 형식인지 확인 (http:// 또는 https://로 시작)
+    if data_input.startswith('http://') or data_input.startswith('https://'):
+        try:
+            # 임시 파일명 생성 (원본 파일 확장자 유지 시도)
+            # 간단하게 uuid를 사용하거나, url에서 파일명을 파싱할 수 있습니다.
+            temp_filename = f"{uuid.uuid4()}_{os.path.basename(data_input)}"
+            file_path = os.path.abspath(os.path.join(temp_dir, temp_filename))
+            
+            # wget을 사용하여 파일 다운로드
+            print(f"⬇️ URL에서 파일 다운로드 중: {data_input}")
+            subprocess.run(['wget', '-O', file_path, data_input], check=True)
+            
+            print(f"✅ URL 입력을 '{file_path}' 파일로 저장했습니다.")
+            return file_path
+        except subprocess.CalledProcessError as e:
+            print(f"❌ wget 실행 실패: {e}")
+            # 에러 발생 시 None 또는 다른 방식으로 처리 가능
+            return None 
+        except Exception as e:
+            print(f"❌ URL 처리 중 에러 발생: {e}")
+            return None
+
+    # Base64 문자열인지 확인
     try:
-        # Base64 문자열은 디코딩을 시도하면 성공합니다.
         decoded_data = base64.b64decode(data_input)
-        
-        # 디코딩에 성공하면, 임시 파일로 저장합니다.
         file_path = os.path.abspath(os.path.join(temp_dir, output_filename))
-        with open(file_path, 'wb') as f: # 바이너리 쓰기 모드('wb')로 저장
+        with open(file_path, 'wb') as f:
             f.write(decoded_data)
-        
-        # 저장된 파일의 경로를 반환합니다.
         print(f"✅ Base64 입력을 '{file_path}' 파일로 저장했습니다.")
         return file_path
 
     except (binascii.Error, ValueError):
-        # 디코딩에 실패하면, 일반 경로로 간주하고 원래 값을 그대로 반환합니다.
+        # 디코딩 실패 시, 일반 파일 경로로 간주
         print(f"➡️ '{data_input}'은(는) 파일 경로로 처리합니다.")
         return data_input
     
