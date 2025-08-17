@@ -8,6 +8,7 @@ import uuid
 import shutil
 import subprocess # subprocess 모듈 추가
 import logging
+import re
 
 def save_data_if_base64(data_input, temp_dir, output_filename):
     """
@@ -41,18 +42,38 @@ def save_data_if_base64(data_input, temp_dir, output_filename):
             return None
 
     # Base64 문자열인지 확인
-    try:
-        decoded_data = base64.b64decode(data_input)
-        file_path = os.path.abspath(os.path.join(temp_dir, output_filename))
-        with open(file_path, 'wb') as f:
-            f.write(decoded_data)
-        print(f"✅ Base64 입력을 '{file_path}' 파일로 저장했습니다.")
-        return file_path
+    base64_pattern = re.compile(r'^[A-Za-z0-9+/]*={0,2}$')
 
-    except (binascii.Error, ValueError):
-        # 디코딩 실패 시, 일반 파일 경로로 간주
+    if base64_pattern.fullmatch(data_input):
+        print("✅ Base64 형식으로 판단되어 디코딩을 시도합니다.")
+        try:
+            # 2. 형식이 맞으면 디코딩 시도 (패딩 오류 등을 잡기 위함)
+            decoded_data = base64.b64decode(data_input)
+            file_path = os.path.abspath(os.path.join(temp_dir, output_filename))
+            with open(file_path, 'wb') as f:
+                f.write(decoded_data)
+            print(f"✅ Base64 입력을 '{file_path}' 파일로 저장했습니다.")
+            return file_path
+        except (binascii.Error, ValueError) as e:
+            # 형식은 맞았으나 패딩 오류 등으로 디코딩 실패 시
+            print(f"⚠️ Base64 형식이지만 디코딩에 실패했습니다: {e}. 파일 경로로 처리합니다.")
+            return data_input
+    else:
+        # 1-1. 정규식 검사에서 실패하면 바로 파일 경로로 처리
         print(f"➡️ '{data_input}'은(는) 파일 경로로 처리합니다.")
         return data_input
+    # try:
+    #     decoded_data = base64.b64decode(data_input)
+    #     file_path = os.path.abspath(os.path.join(temp_dir, output_filename))
+    #     with open(file_path, 'wb') as f:
+    #         f.write(decoded_data)
+    #     print(f"✅ Base64 입력을 '{file_path}' 파일로 저장했습니다.")
+    #     return file_path
+
+    # except (binascii.Error, ValueError):
+    #     # 디코딩 실패 시, 일반 파일 경로로 간주
+    #     print(f"➡️ '{data_input}'은(는) 파일 경로로 처리합니다.")
+    #     return data_input
     
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
