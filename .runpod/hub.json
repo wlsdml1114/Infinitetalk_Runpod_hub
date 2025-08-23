@@ -1,13 +1,13 @@
 {
-    "title": "Multitalk_Runpod_hub",
-    "description": "MultiTalk is an AI model that generates natural lip-synced videos in real time using single-person photos and multilingual audio input.",
+    "title": "InfiniteTalk_Runpod_hub",
+    "description": "InfiniteTalk is an unlimited-length talking video generation​​ model that supports both audio-driven video-to-video and image-to-video generation",
     "type": "serverless",
     "category": "video",
     "iconUrl": "https://example.com/icon.png",
   
     "config": {
       "runsOn": "GPU",
-      "containerDiskInGb": 180,
+      "containerDiskInGb": 280,
   
       "gpuCount": 1,
       "gpuIds": "ADA_24,ADA_32_PRO",
