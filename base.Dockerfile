@@ -37,18 +37,11 @@ RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
 
 RUN pip install -U wheel setuptools packaging
 
-RUN pip install torch==2.7.0+cu128 torchvision torchaudio xformers triton --index-url https://download.pytorch.org/whl/cu128
-
-ENV TORCH_CUDA_ARCH_LIST="8.9;9.0"
-WORKDIR /
-RUN git clone https://github.com/thu-ml/SageAttention.git
-WORKDIR /SageAttention
-RUN sed -i "/compute_capabilities = set()/a compute_capabilities = {\"$TORCH_CUDA_ARCH_LIST\"}" setup.py
-RUN python setup.py install
+RUN pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 xformers==0.0.28 --index-url https://download.pytorch.org/whl/cu121
 
 WORKDIR /
-RUN git clone https://github.com/MeiGen-AI/MultiTalk.git
-WORKDIR /MultiTalk
+RUN git clone https://github.com/MeiGen-AI/InfiniteTalk.git
+WORKDIR /InfiniteTalk
 
 
 RUN pip install misaki[en]
