@@ -173,7 +173,7 @@ def handler(job):
             capture_output=True, 
             text=True, 
             check=True,
-            cwd='/MultiTalk'
+            cwd='/InfiniteTalk'
         )
         
         # 디버깅을 위해 자식 프로세스의 출력을 로깅
