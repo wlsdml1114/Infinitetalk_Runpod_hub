@@ -4,8 +4,8 @@
         "name": "test_case_name",
         "input": {
             "prompt": "A person is talking.",
-            "image_path": "./examples/image.jpg",
-            "wav_path": "./examples/audio.wav",
+            "image_path": "/examples/image.jpg",
+            "wav_path": "/examples/audio.wav",
             "width": 640,
             "height": 640
         },
