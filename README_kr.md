@@ -26,24 +26,77 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 
 ### 입력
 
-`input` 객체는 다음 필드를 포함해야 합니다. `image_path`와 `wav_path`는 **URL, 파일 경로 또는 Base64 인코딩된 문자열**을 지원합니다.
+`input` 객체는 다음 필드를 포함해야 합니다. 이미지와 오디오는 각각 **경로, URL 또는 Base64** 중 하나의 방식으로 입력할 수 있습니다.
 
+#### 이미지 입력 (다음 중 하나만 사용)
 | 매개변수 | 타입 | 필수 | 기본값 | 설명 |
 | --- | --- | --- | --- | --- |
-| `prompt` | `string` | **예** | `N/A` | 생성할 비디오에 대한 설명 텍스트. |
-| `image_path` | `string` | **예** | `N/A` | 립싱크를 적용할 인물 이미지의 경로, URL 또는 Base64 문자열. |
-| `wav_path` | `string` | **예** | `N/A` | 오디오 파일의 경로, URL 또는 Base64 문자열 (WAV 형식 권장). |
-| `width` | `integer` | **예** | `N/A` | 출력 비디오의 너비 (픽셀). |
-| `height` | `integer` | **예** | `N/A` | 출력 비디오의 높이 (픽셀). |
+| `image_path` | `string` | 아니오 | `/examples/image.jpg` | 립싱크를 적용할 인물 이미지의 로컬 경로 |
+| `image_url` | `string` | 아니오 | `/examples/image.jpg` | 립싱크를 적용할 인물 이미지의 URL |
+| `image_base64` | `string` | 아니오 | `/examples/image.jpg` | 립싱크를 적용할 인물 이미지의 Base64 인코딩된 문자열 |
+
+#### 오디오 입력 (다음 중 하나만 사용)
+| 매개변수 | 타입 | 필수 | 기본값 | 설명 |
+| --- | --- | --- | --- | --- |
+| `wav_path` | `string` | 아니오 | `/examples/audio.mp3` | 오디오 파일의 로컬 경로 (WAV/MP3 형식 지원) |
+| `wav_url` | `string` | 아니오 | `/examples/audio.mp3` | 오디오 파일의 URL (WAV/MP3 형식 지원) |
+| `wav_base64` | `string` | 아니오 | `/examples/audio.mp3` | 오디오 파일의 Base64 인코딩된 문자열 (WAV/MP3 형식 지원) |
+
+#### 기타 필수 매개변수
+| 매개변수 | 타입 | 필수 | 기본값 | 설명 |
+| --- | --- | --- | --- | --- |
+| `prompt` | `string` | **예** | `N/A` | 생성할 비디오에 대한 설명 텍스트 |
+| `width` | `integer` | **예** | `N/A` | 출력 비디오의 너비 (픽셀) |
+| `height` | `integer` | **예** | `N/A` | 출력 비디오의 높이 (픽셀) |
 
 **요청 예시:**
 
+**경로 사용:**
 ```json
 {
   "input": {
     "prompt": "사람이 자연스럽게 말하는 모습.",
-    "image_path": "https://path/to/your/portrait.jpg",
-    "wav_path": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=",
+    "image_path": "/my_volume/portrait.jpg",
+    "wav_path": "/my_volume/audio.wav",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+**URL 사용:**
+```json
+{
+  "input": {
+    "prompt": "사람이 자연스럽게 말하는 모습.",
+    "image_url": "https://example.com/portrait.jpg",
+    "wav_url": "https://example.com/audio.wav",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+**Base64 사용:**
+```json
+{
+  "input": {
+    "prompt": "사람이 자연스럽게 말하는 모습.",
+    "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
+    "wav_base64": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+**하이브리드 사용 (이미지는 URL, 오디오는 Base64):**
+```json
+{
+  "input": {
+    "prompt": "사람이 자연스럽게 말하는 모습.",
+    "image_url": "https://example.com/portrait.jpg",
+    "wav_base64": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=",
     "width": 512,
     "height": 512
   }

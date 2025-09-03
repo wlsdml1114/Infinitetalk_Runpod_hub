@@ -26,24 +26,77 @@ This template includes all the necessary components to run InfiniteTalk as a Run
 
 ### Input
 
-The `input` object must contain the following fields. `image_path` and `wav_path` support **URL, file path, or Base64 encoded string**.
+The `input` object must contain the following fields. Images and audio can be input using **path, URL, or Base64** - one method for each.
 
+#### Image Input (use only one)
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `prompt` | `string` | **Yes** | `N/A` | Description text for the video to be generated. |
-| `image_path` | `string` | **Yes** | `N/A` | Path, URL, or Base64 string of the portrait image to apply lip-sync to. |
-| `wav_path` | `string` | **Yes** | `N/A` | Path, URL, or Base64 string of the audio file (WAV format recommended). |
-| `width` | `integer` | **Yes** | `N/A` | Width of the output video in pixels. |
-| `height` | `integer` | **Yes** | `N/A` | Height of the output video in pixels. |
+| `image_path` | `string` | No | `/examples/image.jpg` | Local path to the portrait image for lip-sync |
+| `image_url` | `string` | No | `/examples/image.jpg` | URL to the portrait image for lip-sync |
+| `image_base64` | `string` | No | `/examples/image.jpg` | Base64 encoded string of the portrait image for lip-sync |
 
-**Request Example:**
+#### Audio Input (use only one)
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `wav_path` | `string` | No | `/examples/audio.mp3` | Local path to the audio file (WAV/MP3 format supported) |
+| `wav_url` | `string` | No | `/examples/audio.mp3` | URL to the audio file (WAV/MP3 format supported) |
+| `wav_base64` | `string` | No | `/examples/audio.mp3` | Base64 encoded string of the audio file (WAV/MP3 format supported) |
 
+#### Other Required Parameters
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `prompt` | `string` | **Yes** | `N/A` | Description text for the video to be generated |
+| `width` | `integer` | **Yes** | `N/A` | Width of the output video in pixels |
+| `height` | `integer` | **Yes** | `N/A` | Height of the output video in pixels |
+
+**Request Examples:**
+
+**Using Paths:**
 ```json
 {
   "input": {
     "prompt": "A person is talking in a natural way.",
-    "image_path": "https://path/to/your/portrait.jpg",
-    "wav_path": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=",
+    "image_path": "/my_volume/portrait.jpg",
+    "wav_path": "/my_volume/audio.wav",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+**Using URLs:**
+```json
+{
+  "input": {
+    "prompt": "A person is talking in a natural way.",
+    "image_url": "https://example.com/portrait.jpg",
+    "wav_url": "https://example.com/audio.wav",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+**Using Base64:**
+```json
+{
+  "input": {
+    "prompt": "A person is talking in a natural way.",
+    "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
+    "wav_base64": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+**Hybrid Usage (image as URL, audio as Base64):**
+```json
+{
+  "input": {
+    "prompt": "A person is talking in a natural way.",
+    "image_url": "https://example.com/portrait.jpg",
+    "wav_base64": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=",
     "width": 512,
     "height": 512
   }

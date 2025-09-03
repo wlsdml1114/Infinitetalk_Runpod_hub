@@ -9,6 +9,8 @@ import logging
 import urllib.request
 import urllib.parse
 import binascii # Base64 에러 처리를 위해 import
+import subprocess
+import time
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,43 +18,94 @@ logger = logging.getLogger(__name__)
 
 server_address = os.getenv('SERVER_ADDRESS', '127.0.0.1')
 client_id = str(uuid.uuid4())
-def save_data_if_base64(data_input, temp_dir, output_filename):
-    """
-    입력 데이터가 Base64 문자열인지 확인하고, 맞다면 파일로 저장 후 경로를 반환합니다.
-    만약 일반 경로 문자열이라면 그대로 반환합니다.
-    """
-    # 입력값이 문자열이 아니면 그대로 반환
-    if not isinstance(data_input, str):
-        return data_input
 
+def download_file_from_url(url, output_path):
+    """URL에서 파일을 다운로드하는 함수"""
     try:
-        # Base64 문자열은 디코딩을 시도하면 성공합니다.
-        decoded_data = base64.b64decode(data_input)
+        # wget을 사용하여 파일 다운로드
+        result = subprocess.run([
+            'wget', '-O', output_path, '--no-verbose', '--timeout=30', url
+        ], capture_output=True, text=True, timeout=60)
+        
+        if result.returncode == 0:
+            logger.info(f"✅ URL에서 파일을 성공적으로 다운로드했습니다: {url} -> {output_path}")
+            return output_path
+        else:
+            logger.error(f"❌ wget 다운로드 실패: {result.stderr}")
+            raise Exception(f"URL 다운로드 실패: {result.stderr}")
+    except subprocess.TimeoutExpired:
+        logger.error("❌ 다운로드 시간 초과")
+        raise Exception("다운로드 시간 초과")
+    except Exception as e:
+        logger.error(f"❌ 다운로드 중 오류 발생: {e}")
+        raise Exception(f"다운로드 중 오류 발생: {e}")
+
+def save_base64_to_file(base64_data, temp_dir, output_filename):
+    """Base64 데이터를 파일로 저장하는 함수"""
+    try:
+        # Base64 문자열 디코딩
+        decoded_data = base64.b64decode(base64_data)
         
         # 디렉토리가 존재하지 않으면 생성
         os.makedirs(temp_dir, exist_ok=True)
         
-        # 디코딩에 성공하면, 임시 파일로 저장합니다.
+        # 파일로 저장
         file_path = os.path.abspath(os.path.join(temp_dir, output_filename))
-        with open(file_path, 'wb') as f: # 바이너리 쓰기 모드('wb')로 저장
+        with open(file_path, 'wb') as f:
             f.write(decoded_data)
         
-        # 저장된 파일의 경로를 반환합니다.
-        print(f"✅ Base64 입력을 '{file_path}' 파일로 저장했습니다.")
+        logger.info(f"✅ Base64 입력을 '{file_path}' 파일로 저장했습니다.")
         return file_path
+    except (binascii.Error, ValueError) as e:
+        logger.error(f"❌ Base64 디코딩 실패: {e}")
+        raise Exception(f"Base64 디코딩 실패: {e}")
 
-    except (binascii.Error, ValueError):
-        # 디코딩에 실패하면, 일반 경로로 간주하고 원래 값을 그대로 반환합니다.
-        print(f"➡️ '{data_input}'은(는) 파일 경로로 처리합니다.")
-        return data_input
-    
+def process_input(input_data, temp_dir, output_filename, input_type):
+    """입력 데이터를 처리하여 파일 경로를 반환하는 함수"""
+    if input_type == "path":
+        # 경로인 경우 그대로 반환
+        logger.info(f"📁 경로 입력 처리: {input_data}")
+        return input_data
+    elif input_type == "url":
+        # URL인 경우 다운로드
+        logger.info(f"🌐 URL 입력 처리: {input_data}")
+        os.makedirs(temp_dir, exist_ok=True)
+        file_path = os.path.abspath(os.path.join(temp_dir, output_filename))
+        return download_file_from_url(input_data, file_path)
+    elif input_type == "base64":
+        # Base64인 경우 디코딩하여 저장
+        logger.info(f"🔢 Base64 입력 처리")
+        return save_base64_to_file(input_data, temp_dir, output_filename)
+    else:
+        raise Exception(f"지원하지 않는 입력 타입: {input_type}")
+
 def queue_prompt(prompt):
     url = f"http://{server_address}:8188/prompt"
     logger.info(f"Queueing prompt to: {url}")
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode('utf-8')
+    
+    # 디버깅을 위해 워크플로우 내용 로깅
+    logger.info(f"워크플로우 노드 수: {len(prompt)}")
+    logger.info(f"이미지 노드(284) 설정: {prompt.get('284', {}).get('inputs', {}).get('image', 'NOT_FOUND')}")
+    logger.info(f"오디오 노드(125) 설정: {prompt.get('125', {}).get('inputs', {}).get('audio', 'NOT_FOUND')}")
+    logger.info(f"텍스트 노드(241) 설정: {prompt.get('241', {}).get('inputs', {}).get('positive_prompt', 'NOT_FOUND')}")
+    
     req = urllib.request.Request(url, data=data)
-    return json.loads(urllib.request.urlopen(req).read())
+    req.add_header('Content-Type', 'application/json')
+    
+    try:
+        response = urllib.request.urlopen(req)
+        result = json.loads(response.read())
+        logger.info(f"프롬프트 전송 성공: {result}")
+        return result
+    except urllib.error.HTTPError as e:
+        logger.error(f"HTTP 에러 발생: {e.code} - {e.reason}")
+        logger.error(f"응답 내용: {e.read().decode('utf-8')}")
+        raise
+    except Exception as e:
+        logger.error(f"프롬프트 전송 중 오류: {e}")
+        raise
 
 def get_image(filename, subfolder, folder_type):
     url = f"http://{server_address}:8188/view"
@@ -106,24 +159,61 @@ def handler(job):
     logger.info(f"Received job input: {job_input}")
     task_id = f"task_{uuid.uuid4()}"
 
-    image_input = job_input["image_path"]
-    wav_input = job_input["wav_path"]
-    # 헬퍼 함수를 사용해 이미지 파일 경로 확보 (Base64 또는 Path)
-    # 이미지 확장자를 알 수 없으므로 .jpg로 가정하거나, 입력에서 받아야 합니다.
-    if image_input == "/examples/image.jpg":
-        image_path = "/examples/image.jpg"
-        wav_path = "/examples/audio.wav"
+    # 이미지 입력 처리 (image_path, image_url, image_base64 중 하나만 사용)
+    image_path = None
+    if "image_path" in job_input:
+        image_path = process_input(job_input["image_path"], task_id, "input_image.jpg", "path")
+    elif "image_url" in job_input:
+        image_path = process_input(job_input["image_url"], task_id, "input_image.jpg", "url")
+    elif "image_base64" in job_input:
+        image_path = process_input(job_input["image_base64"], task_id, "input_image.jpg", "base64")
     else:
-        image_path = save_data_if_base64(image_input, task_id, "input_image.jpg")
-        wav_path = save_data_if_base64(wav_input, task_id, "input_audio.wav")
+        # 기본값 사용
+        image_path = "/examples/image.jpg"
+        logger.info("기본 이미지 파일을 사용합니다: /examples/image.jpg")
+
+    # 오디오 입력 처리 (wav_path, wav_url, wav_base64 중 하나만 사용)
+    wav_path = None
+    if "wav_path" in job_input:
+        wav_path = process_input(job_input["wav_path"], task_id, "input_audio.wav", "path")
+    elif "wav_url" in job_input:
+        wav_path = process_input(job_input["wav_url"], task_id, "input_audio.wav", "url")
+    elif "wav_base64" in job_input:
+        wav_path = process_input(job_input["wav_base64"], task_id, "input_audio.wav", "base64")
+    else:
+        # 기본값 사용
+        wav_path = "/examples/audio.mp3"
+        logger.info("기본 오디오 파일을 사용합니다: /examples/audio.mp3")
+
+    # 필수 필드 검증 및 기본값 설정
+    prompt_text = job_input.get("prompt", "A person talking naturally")
+    width = job_input.get("width", 512)
+    height = job_input.get("height", 512)
+    
+    logger.info(f"워크플로우 설정: prompt='{prompt_text}', width={width}, height={height}")
+    logger.info(f"이미지 경로: {image_path}")
+    logger.info(f"오디오 경로: {wav_path}")
 
     prompt = load_workflow("/infinitetalk.json")
 
+    # 파일 존재 여부 확인
+    if not os.path.exists(image_path):
+        logger.error(f"이미지 파일이 존재하지 않습니다: {image_path}")
+        return {"error": f"이미지 파일을 찾을 수 없습니다: {image_path}"}
+    
+    if not os.path.exists(wav_path):
+        logger.error(f"오디오 파일이 존재하지 않습니다: {wav_path}")
+        return {"error": f"오디오 파일을 찾을 수 없습니다: {wav_path}"}
+    
+    logger.info(f"이미지 파일 크기: {os.path.getsize(image_path)} bytes")
+    logger.info(f"오디오 파일 크기: {os.path.getsize(wav_path)} bytes")
+
+    # 워크플로우 노드 설정
     prompt["284"]["inputs"]["image"] = image_path
     prompt["125"]["inputs"]["audio"] = wav_path
-    prompt["241"]["inputs"]["positive_prompt"] = job_input["prompt"]
-    prompt["245"]["inputs"]["value"] = job_input["width"]
-    prompt["246"]["inputs"]["value"] = job_input["height"]
+    prompt["241"]["inputs"]["positive_prompt"] = prompt_text
+    prompt["245"]["inputs"]["value"] = width
+    prompt["246"]["inputs"]["value"] = height
 
     ws_url = f"ws://{server_address}:8188/ws?clientId={client_id}"
     logger.info(f"Connecting to WebSocket: {ws_url}")

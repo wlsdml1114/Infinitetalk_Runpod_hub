@@ -1,6 +1,8 @@
 # Use specific version of nvidia cuda image
 FROM wlsdml1114/multitalk-base:1.4 as runtime
 
+# wget 설치 (URL 다운로드를 위해)
+RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -U "huggingface_hub[hf_transfer]"
 RUN pip install runpod websocket-client
