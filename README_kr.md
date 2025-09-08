@@ -13,6 +13,8 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 *   **고품질 립싱크**: 입술 움직임이 입력 오디오와 정확하게 동기화됩니다.
 *   **실시간 비디오 생성**: 입력 오디오와 동기화된 비디오를 고속으로 생성합니다.
 *   **ComfyUI 통합**: 유연한 워크플로우 관리를 위해 ComfyUI 기반으로 구축되었습니다.
+*   **다중 워크플로우 지원**: 이미지-투-비디오(I2V)와 비디오-투-비디오(V2V) 워크플로우를 모두 지원합니다.
+*   **단일 및 다중 인물**: 단일 인물과 다중 인물 대화 시나리오를 모두 처리합니다.
 
 ## 🚀 RunPod Serverless 템플릿
 
@@ -21,19 +23,34 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 *   **Dockerfile**: 모델 실행에 필요한 모든 종속성을 설치하고 환경을 구성합니다.
 *   **handler.py**: RunPod Serverless용 요청을 처리하는 핸들러 함수를 구현합니다.
 *   **entrypoint.sh**: 워커가 시작될 때 초기화 작업을 수행합니다.
-*   **infinitetalk.json**: 단일 인물 대화 워크플로우 구성.
-*   **infinitetalk_multi.json**: 다중 인물 대화 워크플로우 구성.
+*   **I2V_single.json**: 이미지-투-비디오 단일 인물 워크플로우 구성.
+*   **I2V_multi.json**: 이미지-투-비디오 다중 인물 워크플로우 구성.
+*   **V2V_single.json**: 비디오-투-비디오 단일 인물 워크플로우 구성.
+*   **V2V_multi.json**: 비디오-투-비디오 다중 인물 워크플로우 구성.
 
 ### 입력
 
-`input` 객체는 다음 필드를 포함해야 합니다. 이미지와 오디오는 각각 **경로, URL 또는 Base64** 중 하나의 방식으로 입력할 수 있습니다.
+`input` 객체는 다음 필드를 포함해야 합니다. 이미지, 비디오, 오디오는 각각 **경로, URL 또는 Base64** 중 하나의 방식으로 입력할 수 있습니다.
 
-#### 이미지 입력 (다음 중 하나만 사용)
+#### 워크플로우 선택 매개변수
+| 매개변수 | 타입 | 필수 | 기본값 | 설명 |
+| --- | --- | --- | --- | --- |
+| `input_type` | `string` | 아니오 | `"image"` | 입력 타입: `"image"`는 이미지-투-비디오(I2V), `"video"`는 비디오-투-비디오(V2V) |
+| `person_count` | `string` | 아니오 | `"single"` | 인물 수: `"single"`은 한 명, `"multi"`는 여러 명 |
+
+#### 이미지 입력 (I2V 워크플로우용 - 다음 중 하나만 사용)
 | 매개변수 | 타입 | 필수 | 기본값 | 설명 |
 | --- | --- | --- | --- | --- |
 | `image_path` | `string` | 아니오 | `/examples/image.jpg` | 립싱크를 적용할 인물 이미지의 로컬 경로 |
 | `image_url` | `string` | 아니오 | `/examples/image.jpg` | 립싱크를 적용할 인물 이미지의 URL |
 | `image_base64` | `string` | 아니오 | `/examples/image.jpg` | 립싱크를 적용할 인물 이미지의 Base64 인코딩된 문자열 |
+
+#### 비디오 입력 (V2V 워크플로우용 - 다음 중 하나만 사용)
+| 매개변수 | 타입 | 필수 | 기본값 | 설명 |
+| --- | --- | --- | --- | --- |
+| `video_path` | `string` | 아니오 | `/examples/image.jpg` | 입력 비디오 파일의 로컬 경로 |
+| `video_url` | `string` | 아니오 | `/examples/image.jpg` | 입력 비디오 파일의 URL |
+| `video_base64` | `string` | 아니오 | `/examples/image.jpg` | 입력 비디오 파일의 Base64 인코딩된 문자열 |
 
 #### 오디오 입력 (다음 중 하나만 사용)
 | 매개변수 | 타입 | 필수 | 기본값 | 설명 |
@@ -42,32 +59,28 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 | `wav_url` | `string` | 아니오 | `/examples/audio.mp3` | 오디오 파일의 URL (WAV/MP3 형식 지원) |
 | `wav_base64` | `string` | 아니오 | `/examples/audio.mp3` | 오디오 파일의 Base64 인코딩된 문자열 (WAV/MP3 형식 지원) |
 
-#### 기타 필수 매개변수
+#### 다중 인물 오디오 입력 (다중 인물 워크플로우용 - 다음 중 하나만 사용)
 | 매개변수 | 타입 | 필수 | 기본값 | 설명 |
 | --- | --- | --- | --- | --- |
-| `prompt` | `string` | **예** | `N/A` | 생성할 비디오에 대한 설명 텍스트 |
-| `width` | `integer` | **예** | `N/A` | 출력 비디오의 너비 (픽셀) |
-| `height` | `integer` | **예** | `N/A` | 출력 비디오의 높이 (픽셀) |
+| `wav_path_2` | `string` | 아니오 | 첫 번째 오디오와 동일 | 다중 인물 시나리오용 두 번째 오디오 파일의 로컬 경로 |
+| `wav_url_2` | `string` | 아니오 | 첫 번째 오디오와 동일 | 다중 인물 시나리오용 두 번째 오디오 파일의 URL |
+| `wav_base64_2` | `string` | 아니오 | 첫 번째 오디오와 동일 | 다중 인물 시나리오용 두 번째 오디오 파일의 Base64 인코딩된 문자열 |
+
+#### 기타 매개변수
+| 매개변수 | 타입 | 필수 | 기본값 | 설명 |
+| --- | --- | --- | --- | --- |
+| `prompt` | `string` | 아니오 | `"A person talking naturally"` | 생성할 비디오에 대한 설명 텍스트 |
+| `width` | `integer` | 아니오 | `512` | 출력 비디오의 너비 (픽셀) |
+| `height` | `integer` | 아니오 | `512` | 출력 비디오의 높이 (픽셀) |
 
 **요청 예시:**
 
-**경로 사용:**
+#### 1. I2V Single (이미지-투-비디오 단일 인물)
 ```json
 {
   "input": {
-    "prompt": "사람이 자연스럽게 말하는 모습.",
-    "image_path": "/my_volume/portrait.jpg",
-    "wav_path": "/my_volume/audio.wav",
-    "width": 512,
-    "height": 512
-  }
-}
-```
-
-**URL 사용:**
-```json
-{
-  "input": {
+    "input_type": "image",
+    "person_count": "single",
     "prompt": "사람이 자연스럽게 말하는 모습.",
     "image_url": "https://example.com/portrait.jpg",
     "wav_url": "https://example.com/audio.wav",
@@ -77,10 +90,59 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 }
 ```
 
-**Base64 사용:**
+#### 2. I2V Multi (이미지-투-비디오 다중 인물)
 ```json
 {
   "input": {
+    "input_type": "image",
+    "person_count": "multi",
+    "prompt": "두 사람이 대화하는 모습.",
+    "image_url": "https://example.com/portrait.jpg",
+    "wav_url": "https://example.com/audio1.wav",
+    "wav_url_2": "https://example.com/audio2.wav",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+#### 3. V2V Single (비디오-투-비디오 단일 인물)
+```json
+{
+  "input": {
+    "input_type": "video",
+    "person_count": "single",
+    "prompt": "사람이 노래를 부르는 모습.",
+    "video_url": "https://example.com/input_video.mp4",
+    "wav_url": "https://example.com/audio.wav",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+#### 4. V2V Multi (비디오-투-비디오 다중 인물)
+```json
+{
+  "input": {
+    "input_type": "video",
+    "person_count": "multi",
+    "prompt": "비디오에서 두 사람이 대화하는 모습.",
+    "video_url": "https://example.com/input_video.mp4",
+    "wav_url": "https://example.com/audio1.wav",
+    "wav_url_2": "https://example.com/audio2.wav",
+    "width": 512,
+    "height": 512
+  }
+}
+```
+
+#### 5. Base64 사용 (I2V Single 예시)
+```json
+{
+  "input": {
+    "input_type": "image",
+    "person_count": "single",
     "prompt": "사람이 자연스럽게 말하는 모습.",
     "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
     "wav_base64": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=",
@@ -90,13 +152,15 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 }
 ```
 
-**하이브리드 사용 (이미지는 URL, 오디오는 Base64):**
+#### 6. 로컬 경로 사용 (V2V Single 예시)
 ```json
 {
   "input": {
+    "input_type": "video",
+    "person_count": "single",
     "prompt": "사람이 자연스럽게 말하는 모습.",
-    "image_url": "https://example.com/portrait.jpg",
-    "wav_base64": "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=",
+    "video_path": "/my_volume/input_video.mp4",
+    "wav_path": "/my_volume/audio.wav",
     "width": 512,
     "height": 512
   }
@@ -153,12 +217,25 @@ Base64로 인코딩된 파일을 직접 전송하는 대신 RunPod의 Network Vo
 
 ## 🔧 워크플로우 구성
 
-이 템플릿은 두 가지 워크플로우 구성을 포함합니다:
+이 템플릿은 입력 매개변수에 따라 자동으로 선택되는 네 가지 워크플로우 구성을 포함합니다:
 
-*   **infinitetalk.json**: 단일 인물 대화 워크플로우
-*   **infinitetalk_multi.json**: 다중 인물 대화 워크플로우
+*   **I2V_single.json**: 이미지-투-비디오 단일 인물 워크플로우
+*   **I2V_multi.json**: 이미지-투-비디오 다중 인물 워크플로우  
+*   **V2V_single.json**: 비디오-투-비디오 단일 인물 워크플로우
+*   **V2V_multi.json**: 비디오-투-비디오 다중 인물 워크플로우
 
-워크플로우는 ComfyUI 기반이며 InfiniteTalk 처리에 필요한 모든 노드를 포함합니다.
+### 워크플로우 선택 로직
+
+핸들러는 입력 매개변수에 따라 적절한 워크플로우를 자동으로 선택합니다:
+
+| input_type | person_count | 선택된 워크플로우 |
+|------------|--------------|-------------------|
+| `"image"` | `"single"` | I2V_single.json |
+| `"image"` | `"multi"` | I2V_multi.json |
+| `"video"` | `"single"` | V2V_single.json |
+| `"video"` | `"multi"` | V2V_multi.json |
+
+워크플로우는 ComfyUI 기반이며 InfiniteTalk 처리에 필요한 모든 노드를 포함합니다. 각 워크플로우는 특정 사용 사례에 최적화되어 있으며 적절한 모델 구성을 포함합니다.
 
 ## 🙏 원본 프로젝트
 

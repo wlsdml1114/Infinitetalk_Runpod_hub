@@ -79,7 +79,7 @@ def process_input(input_data, temp_dir, output_filename, input_type):
     else:
         raise Exception(f"지원하지 않는 입력 타입: {input_type}")
 
-def queue_prompt(prompt):
+def queue_prompt(prompt, input_type="image", person_count="single"):
     url = f"http://{server_address}:8188/prompt"
     logger.info(f"Queueing prompt to: {url}")
     p = {"prompt": prompt, "client_id": client_id}
@@ -87,9 +87,17 @@ def queue_prompt(prompt):
     
     # 디버깅을 위해 워크플로우 내용 로깅
     logger.info(f"워크플로우 노드 수: {len(prompt)}")
-    logger.info(f"이미지 노드(284) 설정: {prompt.get('284', {}).get('inputs', {}).get('image', 'NOT_FOUND')}")
+    if input_type == "image":
+        logger.info(f"이미지 노드(284) 설정: {prompt.get('284', {}).get('inputs', {}).get('image', 'NOT_FOUND')}")
+    else:
+        logger.info(f"비디오 노드(228) 설정: {prompt.get('228', {}).get('inputs', {}).get('video', 'NOT_FOUND')}")
     logger.info(f"오디오 노드(125) 설정: {prompt.get('125', {}).get('inputs', {}).get('audio', 'NOT_FOUND')}")
     logger.info(f"텍스트 노드(241) 설정: {prompt.get('241', {}).get('inputs', {}).get('positive_prompt', 'NOT_FOUND')}")
+    if person_count == "multi":
+        if "307" in prompt:
+            logger.info(f"두 번째 오디오 노드(307) 설정: {prompt.get('307', {}).get('inputs', {}).get('audio', 'NOT_FOUND')}")
+        elif "313" in prompt:
+            logger.info(f"두 번째 오디오 노드(313) 설정: {prompt.get('313', {}).get('inputs', {}).get('audio', 'NOT_FOUND')}")
     
     req = urllib.request.Request(url, data=data)
     req.add_header('Content-Type', 'application/json')
@@ -121,8 +129,8 @@ def get_history(prompt_id):
     with urllib.request.urlopen(url) as response:
         return json.loads(response.read())
 
-def get_videos(ws, prompt):
-    prompt_id = queue_prompt(prompt)['prompt_id']
+def get_videos(ws, prompt, input_type="image", person_count="single"):
+    prompt_id = queue_prompt(prompt, input_type, person_count)['prompt_id']
     output_videos = {}
     while True:
         out = ws.recv()
@@ -153,27 +161,66 @@ def load_workflow(workflow_path):
     with open(workflow_path, 'r') as file:
         return json.load(file)
 
+def get_workflow_path(input_type, person_count):
+    """input_type과 person_count에 따라 적절한 워크플로우 파일 경로를 반환"""
+    if input_type == "image":
+        if person_count == "single":
+            return "/I2V_single.json"
+        else:  # multi
+            return "/I2V_multi.json"
+    else:  # video
+        if person_count == "single":
+            return "/V2V_single.json"
+        else:  # multi
+            return "/V2V_multi.json"
+
 def handler(job):
     job_input = job.get("input", {})
 
     logger.info(f"Received job input: {job_input}")
     task_id = f"task_{uuid.uuid4()}"
 
-    # 이미지 입력 처리 (image_path, image_url, image_base64 중 하나만 사용)
-    image_path = None
-    if "image_path" in job_input:
-        image_path = process_input(job_input["image_path"], task_id, "input_image.jpg", "path")
-    elif "image_url" in job_input:
-        image_path = process_input(job_input["image_url"], task_id, "input_image.jpg", "url")
-    elif "image_base64" in job_input:
-        image_path = process_input(job_input["image_base64"], task_id, "input_image.jpg", "base64")
-    else:
-        # 기본값 사용
-        image_path = "/examples/image.jpg"
-        logger.info("기본 이미지 파일을 사용합니다: /examples/image.jpg")
+    # 입력 타입과 인물 수 확인
+    input_type = job_input.get("input_type", "image")  # "image" 또는 "video"
+    person_count = job_input.get("person_count", "single")  # "single" 또는 "multi"
+    
+    logger.info(f"워크플로우 타입: {input_type}, 인물 수: {person_count}")
+
+    # 워크플로우 파일 경로 결정
+    workflow_path = get_workflow_path(input_type, person_count)
+    logger.info(f"사용할 워크플로우: {workflow_path}")
+
+    # 이미지/비디오 입력 처리
+    media_path = None
+    if input_type == "image":
+        # 이미지 입력 처리 (image_path, image_url, image_base64 중 하나만 사용)
+        if "image_path" in job_input:
+            media_path = process_input(job_input["image_path"], task_id, "input_image.jpg", "path")
+        elif "image_url" in job_input:
+            media_path = process_input(job_input["image_url"], task_id, "input_image.jpg", "url")
+        elif "image_base64" in job_input:
+            media_path = process_input(job_input["image_base64"], task_id, "input_image.jpg", "base64")
+        else:
+            # 기본값 사용
+            media_path = "/examples/image.jpg"
+            logger.info("기본 이미지 파일을 사용합니다: /examples/image.jpg")
+    else:  # video
+        # 비디오 입력 처리 (video_path, video_url, video_base64 중 하나만 사용)
+        if "video_path" in job_input:
+            media_path = process_input(job_input["video_path"], task_id, "input_video.mp4", "path")
+        elif "video_url" in job_input:
+            media_path = process_input(job_input["video_url"], task_id, "input_video.mp4", "url")
+        elif "video_base64" in job_input:
+            media_path = process_input(job_input["video_base64"], task_id, "input_video.mp4", "base64")
+        else:
+            # 기본값 사용 (비디오가 없는 경우 기본 이미지 사용)
+            media_path = "/examples/image.jpg"
+            logger.info("기본 이미지 파일을 사용합니다: /examples/image.jpg")
 
     # 오디오 입력 처리 (wav_path, wav_url, wav_base64 중 하나만 사용)
     wav_path = None
+    wav_path_2 = None  # 다중 인물용 두 번째 오디오
+    
     if "wav_path" in job_input:
         wav_path = process_input(job_input["wav_path"], task_id, "input_audio.wav", "path")
     elif "wav_url" in job_input:
@@ -184,6 +231,19 @@ def handler(job):
         # 기본값 사용
         wav_path = "/examples/audio.mp3"
         logger.info("기본 오디오 파일을 사용합니다: /examples/audio.mp3")
+    
+    # 다중 인물용 두 번째 오디오 처리
+    if person_count == "multi":
+        if "wav_path_2" in job_input:
+            wav_path_2 = process_input(job_input["wav_path_2"], task_id, "input_audio_2.wav", "path")
+        elif "wav_url_2" in job_input:
+            wav_path_2 = process_input(job_input["wav_url_2"], task_id, "input_audio_2.wav", "url")
+        elif "wav_base64_2" in job_input:
+            wav_path_2 = process_input(job_input["wav_base64_2"], task_id, "input_audio_2.wav", "base64")
+        else:
+            # 기본값 사용 (첫 번째 오디오와 동일)
+            wav_path_2 = wav_path
+            logger.info("두 번째 오디오가 없어 첫 번째 오디오를 사용합니다.")
 
     # 필수 필드 검증 및 기본값 설정
     prompt_text = job_input.get("prompt", "A person talking naturally")
@@ -191,29 +251,52 @@ def handler(job):
     height = job_input.get("height", 512)
     
     logger.info(f"워크플로우 설정: prompt='{prompt_text}', width={width}, height={height}")
-    logger.info(f"이미지 경로: {image_path}")
+    logger.info(f"미디어 경로: {media_path}")
     logger.info(f"오디오 경로: {wav_path}")
+    if person_count == "multi":
+        logger.info(f"두 번째 오디오 경로: {wav_path_2}")
 
-    prompt = load_workflow("/infinitetalk.json")
+    prompt = load_workflow(workflow_path)
 
     # 파일 존재 여부 확인
-    if not os.path.exists(image_path):
-        logger.error(f"이미지 파일이 존재하지 않습니다: {image_path}")
-        return {"error": f"이미지 파일을 찾을 수 없습니다: {image_path}"}
+    if not os.path.exists(media_path):
+        logger.error(f"미디어 파일이 존재하지 않습니다: {media_path}")
+        return {"error": f"미디어 파일을 찾을 수 없습니다: {media_path}"}
     
     if not os.path.exists(wav_path):
         logger.error(f"오디오 파일이 존재하지 않습니다: {wav_path}")
         return {"error": f"오디오 파일을 찾을 수 없습니다: {wav_path}"}
     
-    logger.info(f"이미지 파일 크기: {os.path.getsize(image_path)} bytes")
+    if person_count == "multi" and wav_path_2 and not os.path.exists(wav_path_2):
+        logger.error(f"두 번째 오디오 파일이 존재하지 않습니다: {wav_path_2}")
+        return {"error": f"두 번째 오디오 파일을 찾을 수 없습니다: {wav_path_2}"}
+    
+    logger.info(f"미디어 파일 크기: {os.path.getsize(media_path)} bytes")
     logger.info(f"오디오 파일 크기: {os.path.getsize(wav_path)} bytes")
+    if person_count == "multi" and wav_path_2:
+        logger.info(f"두 번째 오디오 파일 크기: {os.path.getsize(wav_path_2)} bytes")
 
     # 워크플로우 노드 설정
-    prompt["284"]["inputs"]["image"] = image_path
+    if input_type == "image":
+        # I2V 워크플로우: 이미지 입력 설정
+        prompt["284"]["inputs"]["image"] = media_path
+    else:
+        # V2V 워크플로우: 비디오 입력 설정
+        prompt["228"]["inputs"]["video"] = media_path
+    
+    # 공통 설정
     prompt["125"]["inputs"]["audio"] = wav_path
     prompt["241"]["inputs"]["positive_prompt"] = prompt_text
     prompt["245"]["inputs"]["value"] = width
     prompt["246"]["inputs"]["value"] = height
+    
+    # 다중 인물용 두 번째 오디오 설정
+    if person_count == "multi":
+        # I2V_multi.json과 V2V_multi.json에서 두 번째 오디오 노드 설정
+        if "307" in prompt:  # I2V_multi.json의 경우
+            prompt["307"]["inputs"]["audio"] = wav_path_2
+        elif "313" in prompt:  # V2V_multi.json의 경우
+            prompt["313"]["inputs"]["audio"] = wav_path_2
 
     ws_url = f"ws://{server_address}:8188/ws?clientId={client_id}"
     logger.info(f"Connecting to WebSocket: {ws_url}")
@@ -250,7 +333,7 @@ def handler(job):
             if attempt == max_attempts - 1:
                 raise Exception("웹소켓 연결 시간 초과 (3분)")
             time.sleep(5)
-    videos = get_videos(ws, prompt)
+    videos = get_videos(ws, prompt, input_type, person_count)
     ws.close()
 
     # 이미지가 없는 경우 처리
