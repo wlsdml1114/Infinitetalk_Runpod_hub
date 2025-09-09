@@ -11,6 +11,7 @@ import urllib.parse
 import binascii # Base64 에러 처리를 위해 import
 import subprocess
 import time
+import librosa
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -174,6 +175,43 @@ def get_workflow_path(input_type, person_count):
         else:  # multi
             return "/V2V_multi.json"
 
+def get_audio_duration(audio_path):
+    """오디오 파일의 길이(초)를 반환"""
+    try:
+        duration = librosa.get_duration(path=audio_path)
+        return duration
+    except Exception as e:
+        logger.warning(f"오디오 길이 계산 실패 ({audio_path}): {e}")
+        return None
+
+def calculate_max_frames_from_audio(wav_path, wav_path_2=None, fps=25):
+    """오디오 길이를 기반으로 max_frames를 계산"""
+    durations = []
+    
+    # 첫 번째 오디오 길이 계산
+    duration1 = get_audio_duration(wav_path)
+    if duration1 is not None:
+        durations.append(duration1)
+        logger.info(f"첫 번째 오디오 길이: {duration1:.2f}초")
+    
+    # 두 번째 오디오 길이 계산 (multi person인 경우)
+    if wav_path_2:
+        duration2 = get_audio_duration(wav_path_2)
+        if duration2 is not None:
+            durations.append(duration2)
+            logger.info(f"두 번째 오디오 길이: {duration2:.2f}초")
+    
+    if not durations:
+        logger.warning("오디오 길이를 계산할 수 없습니다. 기본값 81을 사용합니다.")
+        return 81
+    
+    # 가장 긴 오디오 길이를 기준으로 max_frames 계산
+    max_duration = max(durations)
+    max_frames = int(max_duration * fps) + 81
+    
+    logger.info(f"가장 긴 오디오 길이: {max_duration:.2f}초, 계산된 max_frames: {max_frames}")
+    return max_frames
+
 def handler(job):
     job_input = job.get("input", {})
 
@@ -250,7 +288,15 @@ def handler(job):
     width = job_input.get("width", 512)
     height = job_input.get("height", 512)
     
-    logger.info(f"워크플로우 설정: prompt='{prompt_text}', width={width}, height={height}")
+    # max_frame 설정 (입력이 없으면 오디오 길이 기반으로 자동 계산)
+    max_frame = job_input.get("max_frame")
+    if max_frame is None:
+        logger.info("max_frame이 입력되지 않았습니다. 오디오 길이를 기반으로 자동 계산합니다.")
+        max_frame = calculate_max_frames_from_audio(wav_path, wav_path_2 if person_count == "multi" else None)
+    else:
+        logger.info(f"사용자 지정 max_frame: {max_frame}")
+    
+    logger.info(f"워크플로우 설정: prompt='{prompt_text}', width={width}, height={height}, max_frame={max_frame}")
     logger.info(f"미디어 경로: {media_path}")
     logger.info(f"오디오 경로: {wav_path}")
     if person_count == "multi":
@@ -289,6 +335,8 @@ def handler(job):
     prompt["241"]["inputs"]["positive_prompt"] = prompt_text
     prompt["245"]["inputs"]["value"] = width
     prompt["246"]["inputs"]["value"] = height
+    
+    prompt["270"]["inputs"]["value"] = max_frame
     
     # 다중 인물용 두 번째 오디오 설정
     if person_count == "multi":
