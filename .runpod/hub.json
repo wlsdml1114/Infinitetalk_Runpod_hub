@@ -3,7 +3,7 @@
     "description": "InfiniteTalk is an unlimited-length talking video generation​​ model that supports both audio-driven video-to-video and image-to-video generation",
     "type": "serverless",
     "category": "video",
-    "iconUrl": "https://example.com/icon.png",
+    "iconUrl": "https://github.com/wlsdml1114/Engui_Studio/blob/main/assets/logo.png?raw=true",
   
     "config": {
       "runsOn": "GPU",
