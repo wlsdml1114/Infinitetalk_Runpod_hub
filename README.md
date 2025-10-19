@@ -86,6 +86,8 @@ The `input` object must contain the following fields. Images, videos, and audio 
 | `prompt` | `string` | No | `"A person talking naturally"` | Description text for the video to be generated |
 | `width` | `integer` | No | `512` | Width of the output video in pixels |
 | `height` | `integer` | No | `512` | Height of the output video in pixels |
+| `max_frame` | `integer` | No | Auto-calculated | Maximum number of frames for the output video (automatically calculated based on audio duration if not provided) |
+| `network_volume` | `boolean` | No | `false` | Whether to use network volume for output storage. If `true`, returns file path instead of Base64 data |
 
 **Request Examples:**
 
@@ -181,21 +183,53 @@ The `input` object must contain the following fields. Images, videos, and audio 
 }
 ```
 
+#### 7. Using Network Volume for Output (I2V Single Example)
+```json
+{
+  "input": {
+    "input_type": "image",
+    "person_count": "single",
+    "prompt": "A person talking in a natural way.",
+    "image_url": "https://example.com/portrait.jpg",
+    "wav_url": "https://example.com/audio.wav",
+    "width": 512,
+    "height": 512,
+    "network_volume": true
+  }
+}
+```
+
 ### Output
 
 #### Success
 
-If the job is successful, it returns a JSON object with the generated video Base64 encoded.
+If the job is successful, it returns a JSON object with the generated video. The response format depends on the `network_volume` parameter.
+
+**When `network_volume` is `false` (default):**
 
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `video` | `string` | Base64 encoded video file data. |
 
-**Success Response Example:**
+**Success Response Example (Base64):**
 
 ```json
 {
   "video": "data:video/mp4;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+}
+```
+
+**When `network_volume` is `true`:**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `video_path` | `string` | File path to the generated video stored in the network volume. |
+
+**Success Response Example (Network Volume):**
+
+```json
+{
+  "video_path": "/runpod-volume/infinitetalk_task_12345.mp4"
 }
 ```
 
@@ -222,11 +256,29 @@ If the job fails, it returns a JSON object containing an error message.
 
 ### 📁 Using Network Volumes
 
-Instead of directly transmitting Base64 encoded files, you can use RunPod's Network Volumes to handle large files. This is especially useful when dealing with large image or audio files.
+You can use RunPod's Network Volumes for both input and output files. This is especially useful when dealing with large files.
+
+#### For Input Files
+
+Instead of directly transmitting Base64 encoded files, you can use Network Volumes to handle large input files:
 
 1.  **Create and Connect Network Volume**: Create a Network Volume (e.g., S3-based volume) from the RunPod dashboard and connect it to your Serverless Endpoint settings.
-2.  **Upload Files**: Upload the image and audio files you want to use to the created Network Volume.
-3.  **Specify Paths**: When making an API request, specify the file paths within the Network Volume for `image_path` and `wav_path`. For example, if the volume is mounted at `/my_volume` and you use `portrait.jpg`, the path would be `"/my_volume/portrait.jpg"`.
+2.  **Upload Files**: Upload the image, video, and audio files you want to use to the created Network Volume.
+3.  **Specify Paths**: When making an API request, specify the file paths within the Network Volume for `image_path`, `video_path`, and `wav_path`. For example, if the volume is mounted at `/my_volume` and you use `portrait.jpg`, the path would be `"/my_volume/portrait.jpg"`.
+
+#### For Output Files
+
+You can also use Network Volumes to store the generated video files instead of returning Base64 data:
+
+1.  **Set `network_volume` to `true`**: Add `"network_volume": true` to your request input.
+2.  **Get File Path**: The response will contain a `video_path` field with the location of the generated video file in the network volume.
+3.  **Access Files**: The generated video will be saved to `/runpod-volume/` directory with a unique filename.
+
+**Benefits of using Network Volumes:**
+- **Reduced Memory Usage**: No need to load large files into memory for Base64 encoding/decoding
+- **Faster Processing**: Direct file access is more efficient than Base64 conversion
+- **Persistent Storage**: Generated files remain accessible after the job completes
+- **Large File Support**: Handle files larger than typical API payload limits
 
 ## 🔧 Workflow Configuration
 

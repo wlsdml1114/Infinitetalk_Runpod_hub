@@ -386,11 +386,39 @@ def handler(job):
     videos = get_videos(ws, prompt, input_type, person_count)
     ws.close()
 
-    # 이미지가 없는 경우 처리
+    # 비디오가 없는 경우 처리
+    output_video_data = None
     for node_id in videos:
         if videos[node_id]:
-            return {"video": videos[node_id][0]}
+            output_video_data = videos[node_id][0]
+            break
     
-    return {"error": "비디오를를 찾을 수 없습니다."}
+    if not output_video_data:
+        return {"error": "비디오를 찾을 수 없습니다."}
+    
+    # network_volume 파라미터 확인
+    use_network_volume = job_input.get("network_volume", False)
+    
+    if use_network_volume:
+        # 네트워크 볼륨 사용: 파일 경로 반환
+        try:
+            # 결과 비디오 파일 경로 생성
+            output_filename = f"infinitetalk_{task_id}.mp4"
+            output_path = f"/runpod-volume/{output_filename}"
+            
+            # Base64 데이터를 디코딩하여 파일로 저장
+            decoded_data = base64.b64decode(output_video_data)
+            with open(output_path, 'wb') as f:
+                f.write(decoded_data)
+            
+            logger.info(f"결과 비디오를 '{output_path}'에 저장했습니다.")
+            return {"video_path": output_path}
+            
+        except Exception as e:
+            logger.error(f"비디오 저장 실패: {e}")
+            return {"error": f"비디오 저장 실패: {e}"}
+    else:
+        # 네트워크 볼륨 미사용: Base64 인코딩하여 반환
+        return {"video": output_video_data}
 
 runpod.serverless.start({"handler": handler})

@@ -87,6 +87,8 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 | `prompt` | `string` | 아니오 | `"A person talking naturally"` | 생성할 비디오에 대한 설명 텍스트 |
 | `width` | `integer` | 아니오 | `512` | 출력 비디오의 너비 (픽셀) |
 | `height` | `integer` | 아니오 | `512` | 출력 비디오의 높이 (픽셀) |
+| `max_frame` | `integer` | 아니오 | 자동 계산됨 | 출력 비디오의 최대 프레임 수 (제공되지 않으면 오디오 길이를 기반으로 자동 계산) |
+| `network_volume` | `boolean` | 아니오 | `false` | 출력 저장에 네트워크 볼륨 사용 여부. `true`인 경우 Base64 데이터 대신 파일 경로를 반환 |
 
 **요청 예시:**
 
@@ -182,21 +184,53 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 }
 ```
 
+#### 7. 네트워크 볼륨을 사용한 출력 (I2V Single 예시)
+```json
+{
+  "input": {
+    "input_type": "image",
+    "person_count": "single",
+    "prompt": "사람이 자연스럽게 말하는 모습.",
+    "image_url": "https://example.com/portrait.jpg",
+    "wav_url": "https://example.com/audio.wav",
+    "width": 512,
+    "height": 512,
+    "network_volume": true
+  }
+}
+```
+
 ### 출력
 
 #### 성공
 
-작업이 성공하면 생성된 비디오가 Base64로 인코딩된 JSON 객체를 반환합니다.
+작업이 성공하면 생성된 비디오가 포함된 JSON 객체를 반환합니다. 응답 형식은 `network_volume` 매개변수에 따라 달라집니다.
+
+**`network_volume`이 `false`인 경우 (기본값):**
 
 | 매개변수 | 타입 | 설명 |
 | --- | --- | --- |
 | `video` | `string` | Base64로 인코딩된 비디오 파일 데이터. |
 
-**성공 응답 예시:**
+**성공 응답 예시 (Base64):**
 
 ```json
 {
   "video": "data:video/mp4;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+}
+```
+
+**`network_volume`이 `true`인 경우:**
+
+| 매개변수 | 타입 | 설명 |
+| --- | --- | --- |
+| `video_path` | `string` | 네트워크 볼륨에 저장된 생성된 비디오의 파일 경로. |
+
+**성공 응답 예시 (네트워크 볼륨):**
+
+```json
+{
+  "video_path": "/runpod-volume/infinitetalk_task_12345.mp4"
 }
 ```
 
@@ -223,11 +257,29 @@ InfiniteTalk은 단일 인물 이미지와 음성 오디오를 입력으로 받�
 
 ### 📁 네트워크 볼륨 사용
 
-Base64로 인코딩된 파일을 직접 전송하는 대신 RunPod의 Network Volumes를 사용하여 대용량 파일을 처리할 수 있습니다. 이는 특히 큰 이미지나 오디오 파일을 다룰 때 유용합니다.
+입력 파일과 출력 파일 모두에 대해 RunPod의 Network Volumes를 사용할 수 있습니다. 이는 특히 대용량 파일을 다룰 때 유용합니다.
+
+#### 입력 파일용
+
+Base64로 인코딩된 파일을 직접 전송하는 대신 Network Volumes를 사용하여 대용량 입력 파일을 처리할 수 있습니다:
 
 1.  **네트워크 볼륨 생성 및 연결**: RunPod 대시보드에서 Network Volume(예: S3 기반 볼륨)을 생성하고 Serverless Endpoint 설정에 연결합니다.
-2.  **파일 업로드**: 사용하려는 이미지와 오디오 파일을 생성된 Network Volume에 업로드합니다.
-3.  **경로 지정**: API 요청 시 `image_path`와 `wav_path`에 대해 Network Volume 내의 파일 경로를 지정합니다. 예를 들어, 볼륨이 `/my_volume`에 마운트되고 `portrait.jpg`를 사용하는 경우 경로는 `"/my_volume/portrait.jpg"`가 됩니다.
+2.  **파일 업로드**: 사용하려는 이미지, 비디오, 오디오 파일을 생성된 Network Volume에 업로드합니다.
+3.  **경로 지정**: API 요청 시 `image_path`, `video_path`, `wav_path`에 대해 Network Volume 내의 파일 경로를 지정합니다. 예를 들어, 볼륨이 `/my_volume`에 마운트되고 `portrait.jpg`를 사용하는 경우 경로는 `"/my_volume/portrait.jpg"`가 됩니다.
+
+#### 출력 파일용
+
+생성된 비디오 파일을 Base64 데이터로 반환하는 대신 Network Volumes에 저장할 수도 있습니다:
+
+1.  **`network_volume`을 `true`로 설정**: 요청 입력에 `"network_volume": true`를 추가합니다.
+2.  **파일 경로 받기**: 응답에 네트워크 볼륨 내 생성된 비디오 파일의 위치가 포함된 `video_path` 필드가 포함됩니다.
+3.  **파일 접근**: 생성된 비디오는 고유한 파일명으로 `/runpod-volume/` 디렉토리에 저장됩니다.
+
+**네트워크 볼륨 사용의 장점:**
+- **메모리 사용량 감소**: Base64 인코딩/디코딩을 위해 대용량 파일을 메모리에 로드할 필요가 없습니다
+- **더 빠른 처리**: Base64 변환보다 직접 파일 접근이 더 효율적입니다
+- **영구 저장소**: 생성된 파일이 작업 완료 후에도 접근 가능합니다
+- **대용량 파일 지원**: 일반적인 API 페이로드 제한보다 큰 파일을 처리할 수 있습니다
 
 
 ## 🔧 워크플로우 구성
