@@ -229,6 +229,14 @@ class InfinitetalkS3Client:
                 return False
             
             output = result.get('output', {})
+            
+            # When using network_volume (returns video_path)
+            if 'video_path' in output:
+                video_path = output['video_path']
+                logger.info(f"Downloading video from network volume: {video_path}")
+                return self.download_video_from_s3(video_path, output_path)
+            
+            # General case (Base64 data)
             video_b64 = output.get('video_base64') or output.get('video')
             
             if not video_b64:
@@ -252,6 +260,37 @@ class InfinitetalkS3Client:
             logger.error(f"❌ Video save failed: {e}")
             return False
     
+    def download_video_from_s3(self, s3_path: str, output_path: str) -> bool:
+        """
+        Download video file from S3
+        
+        Args:
+            s3_path: S3 file path (e.g., /runpod-volume/infinitetalk_task_12345.mp4)
+            output_path: Local file path to download to
+        
+        Returns:
+            Download success status
+        """
+        try:
+            # Extract key from S3 path (remove /runpod-volume/)
+            s3_key = s3_path.replace('/runpod-volume/', '')
+            
+            logger.info(f"Downloading video from S3: s3://{self.s3_bucket_name}/{s3_key}")
+            
+            # Create directory
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # Download file from S3
+            self.s3_client.download_file(self.s3_bucket_name, s3_key, output_path)
+            
+            file_size = os.path.getsize(output_path)
+            logger.info(f"✅ S3 video download completed: {output_path} ({file_size / (1024*1024):.1f}MB)")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ S3 video download failed: {e}")
+            return False
+    
     def create_video_from_files(
         self,
         image_path: str,
@@ -262,7 +301,8 @@ class InfinitetalkS3Client:
         height: int = 512,
         max_frame: Optional[int] = None,
         person_count: str = "single",
-        input_type: str = "image"
+        input_type: str = "image",
+        use_network_volume: bool = False
     ) -> Dict[str, Any]:
         """
         Create video from local files (including S3 upload)
@@ -277,6 +317,7 @@ class InfinitetalkS3Client:
             max_frame: Maximum frame count
             person_count: Number of people ("single" or "multi")
             input_type: Input type ("image" or "video")
+            use_network_volume: Whether to use network volume (if True, saves result to S3)
         
         Returns:
             Job result dictionary
@@ -339,6 +380,10 @@ class InfinitetalkS3Client:
         # Set max_frame
         if max_frame:
             input_data["max_frame"] = max_frame
+        
+        # Set network_volume
+        if use_network_volume:
+            input_data["network_volume"] = True
         
         # Submit job and wait
         job_id = self.submit_job(input_data)
@@ -537,37 +582,59 @@ def main():
     
     print("=== Infinitetalk S3 Client Usage Example ===\n")
     
-    # Example 1: Single file processing
-    print("1. Single file processing")
+    # Example 1: Single file processing (Base64 method)
+    print("1. Single file processing (Base64 method)")
     result1 = client.create_video_from_files(
         image_path="./examples/image.jpg",
         audio_path="./examples/audio.mp3",
         prompt="A person talking naturally",
         width=512,
-        height=512
+        height=512,
+        use_network_volume=False
     )
     
     if result1.get('status') == 'COMPLETED':
-        client.save_video_result(result1, "./output_single.mp4")
+        client.save_video_result(result1, "./output_single_base64.mp4")
+        print("✅ Video generation completed with Base64 method")
     else:
         print(f"Error: {result1.get('error')}")
     
     print("\n" + "-"*50 + "\n")
     
-    # # Example 2: Batch processing
-    # print("2. Batch processing")
+    # Example 2: Single file processing (Network Volume method)
+    print("2. Single file processing (Network Volume method)")
+    result2 = client.create_video_from_files(
+        image_path="./examples/image.jpg",
+        audio_path="./examples/audio.mp3",
+        prompt="A person talking naturally",
+        width=512,
+        height=512,
+        use_network_volume=True
+    )
+    
+    if result2.get('status') == 'COMPLETED':
+        client.save_video_result(result2, "./output_single_network_volume.mp4")
+        print("✅ Video generation completed with Network Volume method")
+    else:
+        print(f"Error: {result2.get('error')}")
+    
+    print("\n" + "-"*50 + "\n")
+    
+    # Example 3: Batch processing (Network Volume method)
+    # print("3. Batch processing (Network Volume method)")
     # batch_result = client.batch_process_audio_files(
-    #     image_path="examples/image.jpg",
-    #     audio_folder_path="examples/audio_files",
-    #     output_folder_path="output/batch_results",
+    #     image_path="./examples/image.jpg",
+    #     audio_folder_path="./examples/audio_files",
+    #     output_folder_path="./output/batch_results",
     #     prompt="A person talking naturally",
     #     width=512,
-    #     height=512
+    #     height=512,
+    #     use_network_volume=True
     # )
     
     # print(f"Batch processing result: {batch_result}")
     
-    # print("\n=== All examples completed ===")
+    print("\n=== All examples completed ===")
 
 
 if __name__ == "__main__":
