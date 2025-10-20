@@ -1,5 +1,4 @@
 import runpod
-from runpod.serverless.utils import rp_upload
 import os
 import websocket
 import base64
@@ -10,11 +9,18 @@ import urllib.request
 import urllib.parse
 import binascii # Base64 에러 처리를 위해 import
 import subprocess
-import time
 import librosa
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def truncate_base64_for_log(base64_str, max_length=50):
+    """Base64 문자열을 로깅용으로 앞부분만 잘라서 반환"""
+    if not base64_str:
+        return "None"
+    if len(base64_str) <= max_length:
+        return base64_str
+    return f"{base64_str[:max_length]}... (총 {len(base64_str)} 문자)"
 
 
 server_address = os.getenv('SERVER_ADDRESS', '127.0.0.1')
@@ -132,6 +138,8 @@ def get_history(prompt_id):
 
 def get_videos(ws, prompt, input_type="image", person_count="single"):
     prompt_id = queue_prompt(prompt, input_type, person_count)['prompt_id']
+    logger.info(f"워크플로우 실행 시작: prompt_id={prompt_id}")
+
     output_videos = {}
     while True:
         out = ws.recv()
@@ -139,23 +147,36 @@ def get_videos(ws, prompt, input_type="image", person_count="single"):
             message = json.loads(out)
             if message['type'] == 'executing':
                 data = message['data']
+                if data['node'] is not None:
+                    logger.info(f"노드 실행 중: {data['node']}")
                 if data['node'] is None and data['prompt_id'] == prompt_id:
+                    logger.info("워크플로우 실행 완료")
                     break
         else:
             continue
 
+    logger.info(f"히스토리 조회 중: prompt_id={prompt_id}")
     history = get_history(prompt_id)[prompt_id]
+    logger.info(f"출력 노드 수: {len(history['outputs'])}")
+
     for node_id in history['outputs']:
         node_output = history['outputs'][node_id]
         videos_output = []
         if 'gifs' in node_output:
-            for video in node_output['gifs']:
+            logger.info(f"노드 {node_id}에서 {len(node_output['gifs'])}개의 비디오 발견")
+            for idx, video in enumerate(node_output['gifs']):
                 # fullpath를 이용하여 직접 파일을 읽고 base64로 인코딩
-                with open(video['fullpath'], 'rb') as f:
+                video_path = video['fullpath']
+                logger.info(f"비디오 파일 읽기 중: {video_path}")
+                with open(video_path, 'rb') as f:
                     video_data = base64.b64encode(f.read()).decode('utf-8')
+                logger.info(f"비디오 {idx+1} 인코딩 완료: {truncate_base64_for_log(video_data)}")
                 videos_output.append(video_data)
+        else:
+            logger.info(f"노드 {node_id}에 비디오 출력 없음")
         output_videos[node_id] = videos_output
 
+    logger.info(f"총 {len(output_videos)}개 노드에서 비디오 수집 완료")
     return output_videos
 
 def load_workflow(workflow_path):
@@ -385,40 +406,54 @@ def handler(job):
             time.sleep(5)
     videos = get_videos(ws, prompt, input_type, person_count)
     ws.close()
+    logger.info("웹소켓 연결 종료")
 
     # 비디오가 없는 경우 처리
     output_video_data = None
+    logger.info("출력 비디오 검색 중...")
+
     for node_id in videos:
         if videos[node_id]:
             output_video_data = videos[node_id][0]
+            logger.info(f"노드 {node_id}에서 출력 비디오 발견: {truncate_base64_for_log(output_video_data)}")
             break
-    
+        else:
+            logger.info(f"노드 {node_id}는 비어있음")
+
     if not output_video_data:
+        logger.error("출력 비디오를 찾을 수 없습니다. 모든 노드가 비어있습니다.")
         return {"error": "비디오를 찾을 수 없습니다."}
     
     # network_volume 파라미터 확인
     use_network_volume = job_input.get("network_volume", False)
-    
+    logger.info(f"네트워크 볼륨 사용 여부: {use_network_volume}")
+
     if use_network_volume:
         # 네트워크 볼륨 사용: 파일 경로 반환
+        logger.info("네트워크 볼륨에 비디오 저장 시작")
         try:
             # 결과 비디오 파일 경로 생성
             output_filename = f"infinitetalk_{task_id}.mp4"
             output_path = f"/runpod-volume/{output_filename}"
-            
+            logger.info(f"저장 경로: {output_path}")
+
             # Base64 데이터를 디코딩하여 파일로 저장
             decoded_data = base64.b64decode(output_video_data)
+            logger.info(f"Base64 디코딩 완료: {len(decoded_data)} bytes")
+
             with open(output_path, 'wb') as f:
                 f.write(decoded_data)
-            
-            logger.info(f"결과 비디오를 '{output_path}'에 저장했습니다.")
+
+            file_size = os.path.getsize(output_path)
+            logger.info(f"✅ 결과 비디오를 '{output_path}'에 저장했습니다 (크기: {file_size} bytes)")
             return {"video_path": output_path}
-            
+
         except Exception as e:
-            logger.error(f"비디오 저장 실패: {e}")
+            logger.error(f"❌ 비디오 저장 실패: {e}")
             return {"error": f"비디오 저장 실패: {e}"}
     else:
         # 네트워크 볼륨 미사용: Base64 인코딩하여 반환
+        logger.info(f"✅ Base64 인코딩된 비디오 반환: {truncate_base64_for_log(output_video_data)}")
         return {"video": output_video_data}
 
 runpod.serverless.start({"handler": handler})
