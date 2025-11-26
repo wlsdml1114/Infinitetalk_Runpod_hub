@@ -404,6 +404,38 @@ def handler(job):
 
     prompt = load_workflow(workflow_path)
 
+    # ------------------------------------------------------------------
+    # Dynamic Force Offload Configuration
+    # ------------------------------------------------------------------
+    # 1. Read from input (Default to True to prevent OOM on smaller GPUs)
+    force_offload = job_input.get("force_offload", True)
+    logger.info(f"🔧 Configuration: force_offload set to {force_offload}")
+
+    # 2. Inject into WanVideoSampler Node (ID 128)
+    # We check for ID 128 first (standard in I2V_single.json), but fallback to search by class type
+    sampler_node_id = "128"
+
+    if sampler_node_id in prompt and prompt[sampler_node_id].get("class_type") == "WanVideoSampler":
+        if "inputs" not in prompt[sampler_node_id]:
+            prompt[sampler_node_id]["inputs"] = {}
+        prompt[sampler_node_id]["inputs"]["force_offload"] = force_offload
+        logger.info(f"✅ Updated Node {sampler_node_id} (WanVideoSampler): force_offload={force_offload}")
+    else:
+        # Fallback: Find the node dynamically if ID changed
+        node_found = False
+        for node_id, node_data in prompt.items():
+            if node_data.get("class_type") == "WanVideoSampler":
+                if "inputs" not in prompt[node_id]:
+                    prompt[node_id]["inputs"] = {}
+                prompt[node_id]["inputs"]["force_offload"] = force_offload
+                logger.info(f"✅ Dynamically updated Node {node_id} (WanVideoSampler): force_offload={force_offload}")
+                node_found = True
+                break
+
+        if not node_found:
+            logger.warning("⚠️ Warning: WanVideoSampler node not found. Using workflow default.")
+    # ------------------------------------------------------------------
+
     # 파일 존재 여부 확인
     if not os.path.exists(media_path):
         logger.error(f"미디어 파일이 존재하지 않습니다: {media_path}")
