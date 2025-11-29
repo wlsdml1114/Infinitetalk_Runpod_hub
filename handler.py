@@ -405,35 +405,34 @@ def handler(job):
     prompt = load_workflow(workflow_path)
 
     # ------------------------------------------------------------------
-    # Dynamic Force Offload Configuration
+    # 동적 Force Offload 설정
     # ------------------------------------------------------------------
-    # 1. Read from input (Default to True to prevent OOM on smaller GPUs)
+    # 1. 입력에서 force_offload 읽기 (기본값 True: 작은 GPU에서 OOM 방지)
     force_offload = job_input.get("force_offload", True)
-    logger.info(f"🔧 Configuration: force_offload set to {force_offload}")
+    logger.info(f"🔧 설정: force_offload={force_offload}")
 
-    # 2. Inject into WanVideoSampler Node (ID 128)
-    # We check for ID 128 first (standard in I2V_single.json), but fallback to search by class type
-    sampler_node_id = "128"
+    # 2. WanVideoSampler 노드에 force_offload 파라미터 주입
+    sampler_node_id = None
+    preferred_id = "128"
 
-    if sampler_node_id in prompt and prompt[sampler_node_id].get("class_type") == "WanVideoSampler":
-        if "inputs" not in prompt[sampler_node_id]:
-            prompt[sampler_node_id]["inputs"] = {}
-        prompt[sampler_node_id]["inputs"]["force_offload"] = force_offload
-        logger.info(f"✅ Updated Node {sampler_node_id} (WanVideoSampler): force_offload={force_offload}")
+    # 효율성을 위해 먼저 선호 ID(128) 확인
+    if preferred_id in prompt and prompt[preferred_id].get("class_type") == "WanVideoSampler":
+        sampler_node_id = preferred_id
     else:
-        # Fallback: Find the node dynamically if ID changed
-        node_found = False
+        # ID가 다른 경우 class type으로 검색 (폴백)
         for node_id, node_data in prompt.items():
             if node_data.get("class_type") == "WanVideoSampler":
-                if "inputs" not in prompt[node_id]:
-                    prompt[node_id]["inputs"] = {}
-                prompt[node_id]["inputs"]["force_offload"] = force_offload
-                logger.info(f"✅ Dynamically updated Node {node_id} (WanVideoSampler): force_offload={force_offload}")
-                node_found = True
+                sampler_node_id = node_id
                 break
 
-        if not node_found:
-            logger.warning("⚠️ Warning: WanVideoSampler node not found. Using workflow default.")
+    # sampler 노드를 찾은 경우 force_offload 파라미터 주입
+    if sampler_node_id:
+        # setdefault를 사용하여 'inputs' 딕셔너리가 없으면 생성
+        inputs = prompt[sampler_node_id].setdefault("inputs", {})
+        inputs["force_offload"] = force_offload
+        logger.info(f"✅ 노드 {sampler_node_id} (WanVideoSampler) 업데이트됨: force_offload={force_offload}")
+    else:
+        logger.warning("⚠️ 경고: WanVideoSampler 노드를 찾을 수 없습니다. 워크플로우 기본값을 사용합니다.")
     # ------------------------------------------------------------------
 
     # 파일 존재 여부 확인
