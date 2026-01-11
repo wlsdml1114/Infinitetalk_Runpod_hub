@@ -1,7 +1,7 @@
 {
   "120": {
     "inputs": {
-      "model": "Wan2_1-InfiniteTalk_Multi_Q8.gguf"
+      "model": "Wan2_1-InfiniteTalk-Multi_fp8_e4m3fn_scaled_KJ.safetensors"
     },
     "class_type": "MultiTalkModelLoader",
     "_meta": {
@@ -10,9 +10,9 @@
   },
   "122": {
     "inputs": {
-      "model": "wan2.1-i2v-14b-480p-Q8_0.gguf",
+      "model": "Wan2_1-I2V-14B-480P_fp8_e4m3fn.safetensors",
       "base_precision": "fp16_fast",
-      "quantization": "disabled",
+      "quantization": "fp8_e4m3fn",
       "load_device": "offload_device",
       "attention_mode": "sageattn",
       "block_swap_args": [
