@@ -284,11 +284,11 @@
   },
   "241": {
     "inputs": {
-      "model_name": "umt5-xxl-enc-bf16.safetensors",
+      "model_name": "umt5-xxl-enc-fp8_e4m3fn.safetensors",
       "precision": "bf16",
       "positive_prompt": "a man is talking",
       "negative_prompt": "bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards",
-      "quantization": "disabled",
+      "quantization": "fp8_e4m3fn",
       "use_disk_cache": false,
       "device": "gpu"
     },
