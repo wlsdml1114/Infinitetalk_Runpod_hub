@@ -87,6 +87,7 @@ The `input` object must contain the following fields. Images, videos, and audio 
 | `width` | `integer` | No | `512` | Width of the output video in pixels |
 | `height` | `integer` | No | `512` | Height of the output video in pixels |
 | `max_frame` | `integer` | No | Auto-calculated | Maximum number of frames for the output video (automatically calculated based on audio duration if not provided) |
+| `force_offload` | `boolean` | No | `true` | Whether to offload model components to CPU during inference. Set to `false` for ~1.5x faster processing on high-VRAM GPUs (24GB+). Default `true` prevents OOM on smaller GPUs. |
 | `network_volume` | `boolean` | No | `false` | Whether to use network volume for output storage. If `true`, returns file path instead of Base64 data |
 
 **Request Examples:**
@@ -285,7 +286,7 @@ You can also use Network Volumes to store the generated video files instead of r
 This template includes four workflow configurations that are automatically selected based on your input parameters:
 
 *   **I2V_single.json**: Image-to-Video single-person workflow
-*   **I2V_multi.json**: Image-to-Video multi-person workflow  
+*   **I2V_multi.json**: Image-to-Video multi-person workflow
 *   **V2V_single.json**: Video-to-Video single-person workflow
 *   **V2V_multi.json**: Video-to-Video multi-person workflow
 

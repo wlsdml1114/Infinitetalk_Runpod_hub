@@ -404,6 +404,37 @@ def handler(job):
 
     prompt = load_workflow(workflow_path)
 
+    # ------------------------------------------------------------------
+    # 동적 Force Offload 설정
+    # ------------------------------------------------------------------
+    # 1. 입력에서 force_offload 읽기 (기본값 True: 작은 GPU에서 OOM 방지)
+    force_offload = job_input.get("force_offload", True)
+    logger.info(f"🔧 설정: force_offload={force_offload}")
+
+    # 2. WanVideoSampler 노드에 force_offload 파라미터 주입
+    sampler_node_id = None
+    preferred_id = "128"
+
+    # 효율성을 위해 먼저 선호 ID(128) 확인
+    if preferred_id in prompt and prompt[preferred_id].get("class_type") == "WanVideoSampler":
+        sampler_node_id = preferred_id
+    else:
+        # ID가 다른 경우 class type으로 검색 (폴백)
+        for node_id, node_data in prompt.items():
+            if node_data.get("class_type") == "WanVideoSampler":
+                sampler_node_id = node_id
+                break
+
+    # sampler 노드를 찾은 경우 force_offload 파라미터 주입
+    if sampler_node_id:
+        # setdefault를 사용하여 'inputs' 딕셔너리가 없으면 생성
+        inputs = prompt[sampler_node_id].setdefault("inputs", {})
+        inputs["force_offload"] = force_offload
+        logger.info(f"✅ 노드 {sampler_node_id} (WanVideoSampler) 업데이트됨: force_offload={force_offload}")
+    else:
+        logger.warning("⚠️ 경고: WanVideoSampler 노드를 찾을 수 없습니다. 워크플로우 기본값을 사용합니다.")
+    # ------------------------------------------------------------------
+
     # 파일 존재 여부 확인
     if not os.path.exists(media_path):
         logger.error(f"미디어 파일이 존재하지 않습니다: {media_path}")
