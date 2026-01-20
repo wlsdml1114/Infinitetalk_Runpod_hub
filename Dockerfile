@@ -1,5 +1,5 @@
 # Use specific version of nvidia cuda image
-FROM wlsdml1114/engui_genai-base:1.9 as runtime
+FROM wlsdml1114/engui_genai-base_ada:1.0 as runtime
 
 # wget 설치 (URL 다운로드를 위해)
 RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
