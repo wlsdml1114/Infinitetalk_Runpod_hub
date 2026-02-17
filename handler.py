@@ -244,7 +244,7 @@ def handler(job):
 
     # job_input을 로깅할 때 base64 데이터는 truncate해서 출력
     log_input = job_input.copy()
-    for key in ["image_base64", "video_base64", "wav_base64", "wav_base64_2"]:
+    for key in ["image_base64", "video_base64", "wav_base64"]:
         if key in log_input:
             log_input[key] = truncate_base64_for_log(log_input[key])
 
@@ -313,8 +313,7 @@ def handler(job):
     )
     logger.info(f"미디어 경로: {media_path}")
     logger.info(f"오디오 경로: {wav_path}")
-    if person_count == "multi":
-        logger.info(f"두 번째 오디오 경로: {wav_path_2}")
+
 
     prompt = load_workflow(workflow_path)
 
@@ -351,14 +350,11 @@ def handler(job):
         logger.error(f"오디오 파일이 존재하지 않습니다: {wav_path}")
         return {"error": f"오디오 파일을 찾을 수 없습니다: {wav_path}"}
 
-    if person_count == "multi" and wav_path_2 and not os.path.exists(wav_path_2):
-        logger.error(f"두 번째 오디오 파일이 존재하지 않습니다: {wav_path_2}")
-        return {"error": f"두 번째 오디오 파일을 찾을 수 없습니다: {wav_path_2}"}
+
 
     logger.info(f"미디어 파일 크기: {os.path.getsize(media_path)} bytes")
     logger.info(f"오디오 파일 크기: {os.path.getsize(wav_path)} bytes")
-    if person_count == "multi" and wav_path_2:
-        logger.info(f"두 번째 오디오 파일 크기: {os.path.getsize(wav_path_2)} bytes")
+
 
     # 워크플로우 노드 설정
     prompt["284"]["inputs"]["image"] = media_path
