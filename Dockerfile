@@ -5,7 +5,7 @@ FROM wlsdml1114/engui_genai-base_blackwell:1.1 as runtime
 RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -U "huggingface_hub[hf_transfer]"
-RUN pip install runpod websocket-client librosa
+RUN pip install runpod websocket-client librosa boto3
 
 WORKDIR /
 

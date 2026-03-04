@@ -11,6 +11,9 @@ import binascii  # Base64 에러 처리를 위해 import
 import subprocess
 import librosa
 import shutil
+import mimetypes
+import boto3
+from botocore.exceptions import NoCredentialsError
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -57,11 +60,59 @@ def download_file_from_url(url, output_path):
         raise Exception(f"다운로드 중 오류 발생: {e}")
 
 
+def detect_file_type(data):
+    """바이트 데이터에서 파일 타입 감지"""
+    if data.startswith(b'\xff\xd8'):
+        return '.jpg'
+    if data.startswith(b'\x89PNG\r\n\x1a\n'):
+        return '.png'
+    if data.startswith(b'RIFF') and data[8:12] == b'WEBP':
+        return '.webp'
+    if data.startswith(b'RIFF') and data[8:12] == b'WAVE':
+        return '.wav'
+    if data.startswith(b'ID3') or data.startswith(b'\xff\xfb') or data.startswith(b'\xff\xf3') or data.startswith(b'\xff\xf2'):
+        return '.mp3'
+    if data.startswith(b'\x00\x00\x00\x18ftypmp42') or data.startswith(b'\x00\x00\x00\x20ftypmp42'):
+        return '.mp4'
+    if data.startswith(b'\x00\x00\x00\x14ftypm4a') or data.startswith(b'\x00\x00\x00\x20ftypM4A'):
+         return '.m4a'
+    return None
+
 def save_base64_to_file(base64_data, temp_dir, output_filename):
     """Base64 데이터를 파일로 저장하는 함수"""
     try:
+        original_output_filename = output_filename
+        # data URI 스킴 처리 (예: data:image/png;base64,...)
+        is_data_uri = False
+        if ',' in base64_data[:100]: # Heuristic to check for data URI header
+            parts = base64_data.split(',', 1)
+            if len(parts) == 2:
+                header, base64_data_content = parts
+                if 'data:' in header and ';base64' in header:
+                    is_data_uri = True
+                    # 헤더에서 확장자 추출 시도
+                    mime_type = header.split(':')[1].split(';')[0]
+                    ext = mimetypes.guess_extension(mime_type)
+                    if ext:
+                        base_name = os.path.splitext(output_filename)[0]
+                        # .jpe -> .jpg 변환 처리
+                        if ext == '.jpe': ext = '.jpg'
+                        output_filename = f"{base_name}{ext}"
+                        logger.info(f"Base64 헤더에서 확장자 감지: {ext}")
+                    base64_data = base64_data_content # Update base64_data to just the content
+
         # Base64 문자열 디코딩
         decoded_data = base64.b64decode(base64_data)
+        
+        # 헤더가 없었거나 헤더에서 확장자를 찾지 못했다면 매직 넘버로 확장자 감지 시도
+        if not is_data_uri or output_filename == original_output_filename:
+             detected_ext = detect_file_type(decoded_data)
+             if detected_ext:
+                 base_name = os.path.splitext(output_filename)[0]
+                 new_filename = f"{base_name}{detected_ext}"
+                 if new_filename != output_filename:
+                     logger.info(f"Base64 데이터에서 확장자 감지: {original_output_filename} -> {new_filename}")
+                     output_filename = new_filename
 
         # 디렉토리가 존재하지 않으면 생성
         os.makedirs(temp_dir, exist_ok=True)
@@ -78,6 +129,34 @@ def save_base64_to_file(base64_data, temp_dir, output_filename):
         raise Exception(f"Base64 디코딩 실패: {e}")
 
 
+
+def get_extension_from_url(url):
+    """URL에서 파일 확장자를 감지하는 함수"""
+    try:
+        # 1. URL 경로에서 확장자 추출 시도
+        parsed = urllib.parse.urlparse(url)
+        path = parsed.path
+        ext = os.path.splitext(path)[1].lower()
+        if ext in ['.jpg', '.jpeg', '.png', '.webp', '.mp3', '.wav', '.m4a', '.mp4']:
+            return ext
+        
+        # 2. 헤더에서 Content-Type 확인 (HEAD 요청)
+        req = urllib.request.Request(url, method='HEAD')
+        req.add_header('User-Agent', 'Mozilla/5.0')
+        with urllib.request.urlopen(req, timeout=5) as response:
+            content_type = response.info().get_content_type()
+            ext = mimetypes.guess_extension(content_type)
+            if ext == '.jpe': 
+                return '.jpg'
+            if ext: 
+                return ext
+            
+    except Exception as e:
+        logger.warning(f"확장자 감지 실패: {e}")
+    
+    return None
+
+
 def process_input(input_data, temp_dir, output_filename, input_type):
     """입력 데이터를 처리하여 파일 경로를 반환하는 함수"""
     if input_type == "path":
@@ -87,6 +166,16 @@ def process_input(input_data, temp_dir, output_filename, input_type):
     elif input_type == "url":
         # URL인 경우 다운로드
         logger.info(f"🌐 URL 입력 처리: {input_data}")
+        
+        # 확장자 감지 및 적용
+        detected_ext = get_extension_from_url(input_data)
+        if detected_ext:
+            base_name = os.path.splitext(output_filename)[0]
+            new_filename = f"{base_name}{detected_ext}"
+            if new_filename != output_filename:
+                logger.info(f"감지된 확장자 적용: {output_filename} -> {new_filename}")
+                output_filename = new_filename
+
         os.makedirs(temp_dir, exist_ok=True)
         file_path = os.path.abspath(os.path.join(temp_dir, output_filename))
         return download_file_from_url(input_data, file_path)
@@ -237,6 +326,71 @@ def calculate_max_frames_from_audio(wav_path, fps=25):
         f"오디오 길이: {duration:.2f}초, 계산된 max_frames: {max_frames}"
     )
     return max_frames
+
+
+def upload_to_r2(video_data, file_name):
+    """
+    비디오 데이터를 Cloudflare R2에 업로드하고 URL을 반환합니다.
+    환경변수 R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME이 필요합니다.
+    """
+    try:
+        account_id = os.environ.get('R2_ACCOUNT_ID')
+        access_key = os.environ.get('R2_ACCESS_KEY_ID')
+        secret_key = os.environ.get('R2_SECRET_ACCESS_KEY')
+        bucket_name = os.environ.get('R2_BUCKET_NAME')
+        custom_domain = os.environ.get('R2_CUSTOM_DOMAIN')
+
+        if not all([account_id, access_key, secret_key, bucket_name]):
+            logger.error("R2 업로드를 위한 환경변수가 설정되지 않았습니다.")
+            return None
+
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=f'https://{account_id}.r2.cloudflarestorage.com',
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
+        )
+
+        # Base64 디코딩 (이미 바이트로 넘어오면 그대로 사용)
+        if isinstance(video_data, str):
+            try:
+                video_bytes = base64.b64decode(video_data)
+            except binascii.Error:
+                video_bytes = video_data.encode('utf-8')
+        else:
+            video_bytes = video_data
+
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=file_name,
+            Body=video_bytes,
+            ContentType='video/mp4'
+        )
+        
+        if custom_domain:
+            url = f"{custom_domain}/{file_name}"
+            # http/https prefix check
+            if not url.startswith("http"):
+                 url = f"https://{url}"
+            logger.info(f"✅ R2 업로드 성공 (Public URL): {url}")
+            return url
+        else:
+            # Custom Domain이 없는 경우 Presigned URL 생성 (1시간 유효)
+            try:
+                url = s3_client.generate_presigned_url(
+                    ClientMethod='get_object',
+                    Params={'Bucket': bucket_name, 'Key': file_name},
+                    ExpiresIn=3600
+                )
+                logger.info(f"✅ R2 업로드 성공 (Presigned URL): {url}")
+                return url
+            except Exception as e:
+                logger.error(f"❌ Presigned URL 생성 실패: {e}")
+                return None
+
+    except Exception as e:
+        logger.error(f"❌ R2 업로드 중 오류 발생: {e}")
+        return None
 
 
 def handler(job):
@@ -473,30 +627,52 @@ def handler(job):
         except Exception as e:
             logger.error(f"❌ 비디오 복사 실패: {e}")
             return {"error": f"비디오 복사 실패: {e}"}
-    else:
-        # 네트워크 볼륨 미사용: Base64 인코딩하여 반환
-        logger.info("Base64 인코딩 시작")
+
+    elif job_input.get("return_url", False):
+        # R2 업로드: Base64 인코딩 대신 R2에 업로드하고 URL 반환
+        logger.info("R2 업로드 시작")
         logger.info(f"비디오 파일 경로: {output_video_path}")
 
         try:
-            # 파일 크기 확인
-            file_size = os.path.getsize(output_video_path)
-            logger.info(f"원본 파일 크기: {file_size} bytes")
-
-            # 파일을 읽어 base64 인코딩
+            # 파일 읽기
             with open(output_video_path, "rb") as f:
-                video_data = base64.b64encode(f.read()).decode("utf-8")
+                video_bytes = f.read()
 
-            encoded_size = len(video_data)
-            logger.info(f"Base64 인코딩 완료: {encoded_size} 문자")
-            logger.info(
-                f"✅ Base64 인코딩된 비디오 반환: {truncate_base64_for_log(video_data)}"
-            )
-            return {"video": video_data}
+            file_name = f"{task_id}.mp4"
+            video_url = upload_to_r2(video_bytes, file_name)
 
+            if video_url:
+                return {"video_url": video_url}
+            else:
+                logger.warning("R2 업로드 실패, Base64 비디오를 반환합니다.")
+                # 업로드 실패 시 아래 Base64 반환 로직으로 진행 (fall-through)
         except Exception as e:
-            logger.error(f"❌ Base64 인코딩 실패: {e}")
-            return {"error": f"Base64 인코딩 실패: {e}"}
+             logger.error(f"❌ R2 업로드 실패: {e}")
+             # 에러 발생 시 아래 Base64 반환 로직으로 진행
+
+    # 네트워크 볼륨 미사용 및 R2 업로드 미사용/실패: Base64 인코딩하여 반환
+    logger.info("Base64 인코딩 시작")
+    logger.info(f"비디오 파일 경로: {output_video_path}")
+
+    try:
+        # 파일 크기 확인
+        file_size = os.path.getsize(output_video_path)
+        logger.info(f"원본 파일 크기: {file_size} bytes")
+
+        # 파일을 읽어 base64 인코딩
+        with open(output_video_path, "rb") as f:
+            video_data = base64.b64encode(f.read()).decode("utf-8")
+
+        encoded_size = len(video_data)
+        logger.info(f"Base64 인코딩 완료: {encoded_size} 문자")
+        logger.info(
+            f"✅ Base64 인코딩된 비디오 반환: {truncate_base64_for_log(video_data)}"
+        )
+        return {"video": video_data}
+
+    except Exception as e:
+        logger.error(f"❌ Base64 인코딩 실패: {e}")
+        return {"error": f"Base64 인코딩 실패: {e}"}
 
 
 runpod.serverless.start({"handler": handler})
