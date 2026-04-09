@@ -12,6 +12,27 @@ import subprocess
 import librosa
 import shutil
 
+def pick_best_video(candidates):
+    """
+    candidates: list of file paths
+    Preference:
+    1) files ending with '-audio.mp4'
+    2) otherwise the largest existing mp4
+    """
+    existing = [p for p in candidates if p and os.path.exists(p)]
+    if not existing:
+        return None
+
+    audio_muxed = [p for p in existing if p.endswith("-audio.mp4")]
+    if audio_muxed:
+        return max(audio_muxed, key=lambda p: os.path.getsize(p))
+
+    mp4s = [p for p in existing if p.endswith(".mp4")]
+    if mp4s:
+        return max(mp4s, key=lambda p: os.path.getsize(p))
+
+    return max(existing, key=lambda p: os.path.getsize(p))
+
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -528,17 +549,24 @@ def handler(job):
     output_video_path = None
     logger.info("출력 비디오 검색 중...")
 
+    all_video_candidates = []
+
     for node_id in videos:
         if videos[node_id]:
-            output_video_path = videos[node_id][0]
-            logger.info(f"노드 {node_id}에서 출력 비디오 발견: {output_video_path}")
-            break
+            logger.info(f"노드 {node_id}에서 {len(videos[node_id])}개 비디오 후보 발견")
+            for video_path in videos[node_id]:
+                logger.info(f"비디오 후보: {video_path}")
+                all_video_candidates.append(video_path)
         else:
             logger.info(f"노드 {node_id}는 비어있음")
+
+    output_video_path = pick_best_video(all_video_candidates)
 
     if not output_video_path:
         logger.error("출력 비디오를 찾을 수 없습니다. 모든 노드가 비어있습니다.")
         return {"error": "비디오를 찾을 수 없습니다."}
+
+    logger.info(f"선택된 최종 출력 비디오: {output_video_path}")
 
     # 비디오 파일 존재 여부 확인
     if not os.path.exists(output_video_path):
