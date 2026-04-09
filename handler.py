@@ -11,6 +11,7 @@ import binascii  # Base64 에러 처리를 위해 import
 import subprocess
 import librosa
 import shutil
+import time
 
 def pick_best_video(candidates):
     """
