@@ -528,6 +528,23 @@ def handler(job):
     output_video_path = None
     logger.info("출력 비디오 검색 중...")
 
+    # 1순위: 오디오가 머지된 파일 (VHS_VideoCombine이 ffmpeg로 만든 "-audio.mp4")
+    for node_id, paths in videos.items():
+    for p in paths:
+        if p and p.endswith("-audio.mp4"):
+            output_video_path = p
+            logger.info(
+                f"✅ 오디오 포함 비디오 선택: 노드 {node_id} -> {output_video_path}"
+            )
+            break
+    if output_video_path:
+        break
+
+    # 2순위 (폴백): "-audio.mp4"가 없으면 기존 로직대로 첫 번째 비디오 사용
+    if not output_video_path:
+    logger.warning(
+        "⚠️ '-audio.mp4' 파일을 찾지 못했습니다. 폴백: 첫 번째 비디오 사용 (무음일 수 있음)"
+    )
     for node_id in videos:
         if videos[node_id]:
             output_video_path = videos[node_id][0]
